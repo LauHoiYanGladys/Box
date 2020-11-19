@@ -1,3 +1,6 @@
 .vs
 x64
 project/x64
+project/project.vcxproj
+project/project.vcxproj.filters
+project/project.vcxproj.user
