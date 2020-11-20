@@ -182,14 +182,17 @@ bool Manager::manage()
 		}
 	}
 
-	
-
-	// if (selectedBoxes)->highlight
 
 	// selecting boxes
 	if (editModeIsOn && mouseEvent == FSMOUSEEVENT_LBUTTONDOWN && currBox != nullptr) {
-		// add current box to selected boxes
-		selectedBoxes.push_back(currBox);
+		// add current box to selected boxes if not already there
+		if (!selectedBoxes.empty()) {
+			for (auto& aSelectedBox : selectedBoxes)
+				if (currBox->getLabel().compare(aSelectedBox->getLabel()) == 0)
+					selectedBoxes.push_back(currBox);
+		}
+		else
+			selectedBoxes.push_back(currBox);
 	}
 
 	// moving boxes
@@ -203,12 +206,7 @@ bool Manager::manage()
 		currBox->setComY(currBox->getComY() + locY - prevLocY);
 		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
 	}
-	if (leftButton && editModeIsOn ) { 
 
-		
-	}
-	
-	
 	// draw boxes
 	for (auto& currBox : theBoxes) {
 		// draw the box
@@ -243,7 +241,7 @@ void Manager::load()
 {
 	string inFileName;
 	ifstream inFile;
-	//inFileName = getFileFromConsole();
+
 	inFileName = getFileFromScreen(allModelfiles,
 		"Enter file name of model to load.");
 
@@ -262,15 +260,7 @@ void Manager::load()
 
 	// set starting view params
 	centerOnScreen();
-	// opens a .model file
 
-	// for each line (which represents a box), read in the properties and 
-	// construct the box (call box constructor)
-
-		// add the box to theBoxes unordered map
-		// draw the box
-
-	// close the .model file
 }
 
 void Manager::readFile(ifstream& inFile)
@@ -543,19 +533,28 @@ bool Manager::isValidLoc(Box& box1)
 
 void Manager::save()
 {
-	// obtain user input for file name
+	string outFileName;
+	ofstream outFile;
+	outFileName = getFileFromScreen(allModelfiles,
+		"Enter file name to save the model.");
 
-	// if no .model at the end, append it to the string
+	// if user forgets extension, just add it in
+	if (outFileName.find(".model") == string::npos)
+		outFileName += ".model";
 
 	// open the file
+	outFile.open(outFileName);
 
-	// for each Box in theBoxes
-
-		// call member function of Box that outputs all box properties
-
-		// write into the file
-
-	// close the file
+	if (outFile.is_open()) {
+		for (auto& currBox : theBoxes) {
+			// call member function of Box that writes box properties into file
+			currBox.second.print(outFile);
+		}
+		outFile.close();
+		getAvailableFiles(allModelfiles); // reset list
+	}
+	else
+		cout << "Was not able to open " << outFileName << " for output. " << endl;
 
 }
 
