@@ -229,7 +229,7 @@ bool Manager::manage()
 	FsPollDevice();
 	key = FsInkey();
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
-		rightButton, locX, locY);*/
+		rightButton, locX, locY);
 
 	return (key != FSKEY_ESC);
 }
