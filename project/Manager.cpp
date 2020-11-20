@@ -12,6 +12,33 @@
 
 using namespace std;
 
+Manager::Manager()
+{
+	editModeIsOn = false;
+	gravityIsOn = true;
+
+	boxCounter = 0;
+	
+	xOrigin = 0;
+	yOrigin = WIN_HEIGHT;
+
+	maxX = 0;
+	maxY = 0;
+	minX = 0;
+	minY = 0;
+
+	currBox = nullptr;
+
+	viewScale = 1.0;
+	panChange = 10;
+	zoomFactor = 1.1;
+
+	getAvailableFiles(allModelfiles);
+
+	
+
+}
+
 bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension)
 {
 	double firstXInterval[] = { firstBox.getLeftUpperX(),  firstBox.getRightUpperX() };
@@ -56,8 +83,6 @@ void Manager::showMenu()
 	//cout << "         click on highlighted spline node to insert guide node" << endl;
 	//cout << endl;
 	//cout << "    N : toggle guide nodes on/off" << endl;
-	cout << "    B : cycle through 8 distinct box colors" << endl;
-	cout << endl;
 	//cout << "    P : cycle through 8 distinct slider colors" << endl;
 	//cout << "    O : make slider thicker" << endl;
 	//cout << "    I : make slide thinner" << endl;
@@ -65,8 +90,7 @@ void Manager::showMenu()
 	cout << "Simulation" << endl;
 	cout << "    Q : add a box to the model" << endl;
 	cout << "    W : remove a box from the model" << endl;
-	cout << "SPACE : turn simulation on/off" << endl;
-	cout << "    R : reset simulation" << endl;
+	cout << "    SPACE : turn gravity on/off" << endl;
 	cout << endl;
 	cout << "Panning and Zooming" << endl;
 	cout << "    Use arrow keys on screen to pan model up/down/left/right" << endl;
@@ -81,15 +105,59 @@ bool Manager::manage()
 	bool boxIsMoving = false;
 	FsPollDevice();
 	int key, mouseEvent, leftButton, middleButton, rightButton;
-	int locX, locY;
+	int locX, locY, prevLocX, prevLocY;
 
 	key = FsInkey();
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
 			rightButton, locX, locY);
 
+	if (middleButton || (FsGetKeyState(FSKEY_CTRL) && leftButton)) { // pan in x and y axes
+		
+		xOrigin += (locX - prevLocX);
+		yOrigin += (locY - prevLocY);
+		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
+	}
+
+	else if (key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN // these also are triggered by touchpad pinch and two finger scroll
+		|| (FsGetKeyState(FSKEY_SHIFT) && leftButton)) { // zoom in and out
+		double oldScale = viewScale;
+		if (key == FSKEY_WHEELUP || locY < prevLocY)
+			viewScale *= (zoomFactor - 1) * 0.4 + 1.0; // less jumpty than zooming with +/- keys
+		else if (key == FSKEY_WHEELDOWN || locY > prevLocY)
+			viewScale /= (zoomFactor - 1) * 0.4 + 1.0;
+
+	
+		xOrigin = (int)round((locX * (oldScale - viewScale)
+			+ xOrigin * viewScale) / oldScale);
+		yOrigin = (int)round((locY * (oldScale - viewScale)
+			+ yOrigin * viewScale) / oldScale);
+
+		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
+	}
+
+
 	switch (key) {
 
 	case FSKEY_E: editModeIsOn = !editModeIsOn;
+		break;
+
+	case FSKEY_UP: yOrigin += panChange;
+		break;
+	case FSKEY_DOWN: yOrigin -= panChange;
+		break;
+	case FSKEY_LEFT: xOrigin += panChange;
+		break;
+	case FSKEY_RIGHT: xOrigin -= panChange;
+		break;
+
+	case FSKEY_PLUS: viewScale *= zoomFactor;
+		break;
+	case FSKEY_MINUS: viewScale /= zoomFactor;
+		break;
+
+	case FSKEY_Q: addBox();
+		break;
+	case FSKEY_W: deleteBox();
 		break;
 
 	}
@@ -114,6 +182,8 @@ bool Manager::manage()
 		}
 	}
 
+	
+
 	// if (selectedBoxes)->highlight
 
 	// selecting boxes
@@ -128,13 +198,17 @@ bool Manager::manage()
 
 		double modelX, modelY;
 		// change it to update by the amount that the mouse moved instead
-		getModelCoords(modelX, modelY, locX, locY);
-		currBox->setComX(modelX);
-		currBox->setComY(modelY);
+		//getModelCoords(modelX, modelY, locX, locY); not needed i think?
+		currBox->setComX(currBox->getComX() + locX - prevLocX);
+		currBox->setComY(currBox->getComY() + locY - prevLocY);
+		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
 	}
+	if (leftButton && editModeIsOn ) { 
 
+		
+	}
 	
-
+	
 	// draw boxes
 	for (auto& currBox : theBoxes) {
 		// draw the box
@@ -143,6 +217,8 @@ bool Manager::manage()
 			currBox.second.fall(0.025);
 	}
 
+	FsSwapBuffers();
+
 	//string inFileName;
 	//ifstream inFile;
 	//bool nodeIsMoving = false;
@@ -150,7 +226,7 @@ bool Manager::manage()
 	//int mouseEvent, leftButton, middleButton, rightButton;
 	//int locX, locY;
 
-	/*glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	
 
 	FsPollDevice();
 	key = FsInkey();
@@ -278,9 +354,9 @@ void Manager::editBox(Box& toEdit)
 	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 	{
 		if (key == FSKEY_WHEELUP)
-			toEdit.setWidth(min(toEdit.getWidth() + 1, 100)); //add max
+			toEdit.setWidth(min(toEdit.getWidth() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			toEdit.setWidth(max(toEdit.getWidth() - 1, 1)); //add min
+			toEdit.setWidth(max(toEdit.getWidth() - 1, double(1))); //add min
 
 		FsPollDevice();
 		key = FsInkey();
@@ -297,9 +373,9 @@ void Manager::editBox(Box& toEdit)
 		{
 
 			if (key == FSKEY_WHEELUP)
-				toEdit.setHeight(min(toEdit.getHeight() + 1, 100)); //add max
+				toEdit.setHeight(min(toEdit.getHeight() + 1, double(100))); //add max
 			else if (key == FSKEY_WHEELDOWN)
-				toEdit.setHeight(max(toEdit.getHeight() - 1, 1)); //add min
+				toEdit.setHeight(max(toEdit.getHeight() - 1, double(1))); //add min
 
 			FsPollDevice();
 			key = FsInkey();
@@ -317,9 +393,9 @@ void Manager::editBox(Box& toEdit)
 			{
 
 				if (key == FSKEY_WHEELUP)
-					toEdit.setHue((toEdit.getHue() + 3) % 360);
+					toEdit.setHue(min((toEdit.getHue() + 3), double(360)));
 				if (key == FSKEY_WHEELDOWN)
-					toEdit.setHue((toEdit.getHue() - 3) % 360);
+					toEdit.setHue(max((toEdit.getHue() - 3), double(0)));
 
 				FsPollDevice();
 				key = FsInkey();
@@ -337,8 +413,7 @@ void Manager::editBox(Box& toEdit)
 
 void Manager::addBox()
 {
-	Box toAdd;
-	theBoxes.insert(toAdd.getKey(), toAdd);
+	
 	FsPollDevice();
 	int key = FsInkey();
 	int mouseEvent, leftButton, middleButton, rightButton;
@@ -346,15 +421,22 @@ void Manager::addBox()
 	double modelX, modelY;
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
+	getModelCoords(modelX, modelY, locX, locY);
+	string label = to_string(boxCounter);
+	double tempDim = 10;
+	double tempHue = 0;
+	Box toAdd(label, modelX, modelY, tempDim, tempDim, tempHue);
+	theBoxes.insert({ toAdd.getLabel(), toAdd });
+
 	//Set Width
 	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 	{
 		getModelCoords(modelX, modelY, locX, locY);
 		toAdd.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			toAdd.setWidth(min(toAdd.getWidth() + 1, 100)); //add max
+			toAdd.setWidth(min(toAdd.getWidth() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			toAdd.setWidth(max(toAdd.getWidth() - 1, 1)); //add min
+			toAdd.setWidth(max(toAdd.getWidth() - 1, double(1))); //add min
 
 		FsPollDevice();
 		key = FsInkey();
@@ -371,9 +453,9 @@ void Manager::addBox()
 		getModelCoords(modelX, modelY, locX, locY);
 		toAdd.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			toAdd.setHeight(min(toAdd.getHeight() + 1, 100)); //add max
+			toAdd.setHeight(min(toAdd.getHeight() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			toAdd.setHeight(max(toAdd.getHeight() - 1, 1)); //add min
+			toAdd.setHeight(max(toAdd.getHeight() - 1, double(1))); //add min
 
 		FsPollDevice();
 		key = FsInkey();
@@ -390,9 +472,9 @@ void Manager::addBox()
 		getModelCoords(modelX, modelY, locX, locY);
 		toAdd.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			toAdd.setHue((toAdd.getHue() + 3) % 360);
+			toAdd.setHue(min((toAdd.getHue() + 3), double(360)));
 		if (key == FSKEY_WHEELDOWN)
-			toAdd.setHue((toAdd.getHue() - 3) % 360);
+			toAdd.setHue(max((toAdd.getHue() - 3), double(0)));
 
 		FsPollDevice();
 		key = FsInkey();
@@ -418,9 +500,9 @@ void Manager::deleteBox()
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	getModelCoords(modelX, modelY, locX, locY);
-	Box toDelete = findBox(modelX, modelY, 2);
+	Box* toDelete = findBox(modelX, modelY, 2);
 
-	bool res = deleteBox(toDelete);
+	bool res = deleteBox(*toDelete);
 
 	if (res)
 		cout << "deleted" << endl;
@@ -432,22 +514,26 @@ void Manager::deleteBox()
 
 bool Manager::deleteBox(Box& toDelete)
 {
-	int val = theBoxes.erase(toDelete.getKey());
+	int val = theBoxes.erase(toDelete.getLabel());
 	if (val == 0)
 		return false;
 	else
 		return true;
 }
 
+void Manager::move(Box aBox)
+{
+}
+
 bool Manager::isValidLoc(Box& box1)
 {
-	for (const auto& box2 : theBoxes)
+	for (auto& box2 : theBoxes)
 	{
-		if (box1.getLabel().compare(box2->first) == 0)
+		if (box1.getLabel().compare(box2.first) == 0)
 			continue;
 		else
 		{
-			if (isIntersecting(box1, box2->second, both))
+			if (isIntersecting(box1, box2.second, both))
 				return false;
 		}
 	}
@@ -482,6 +568,7 @@ void Manager::assignYDistanceFromBelow(Box& aBox)
 		double currYMax = 0.;
 		for (auto& currBox : theBoxes) {
 			// loop through all other boxes with max y smaller than min y of the box 
+			//not sure if != works properly with strings. I think .compare() is needed
 			if (currBox.first != aBox.getLabel() && currBox.second.getMaxY() < aBox.getMinY()) {
 				// and check for intersection in x- and -z interval with the box in question
 				if (isIntersecting(currBox.second, aBox, x)) {

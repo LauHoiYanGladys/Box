@@ -27,7 +27,7 @@ private:
 	std::vector<std::string> allModelfiles;
 
 	int xOrigin, yOrigin;  // screen coords of model coords 0,0
-	double viewScale;  // must be greater than zero
+	double viewScale, zoomFactor, panChange;  // must be greater than zero
 
 	// when reading in boxes, need to assign these
 	double minX, maxX, minY, maxY;
@@ -39,7 +39,7 @@ private:
 	int boxCounter;
 
 public:
-	Manager(): editModeIsOn(false), gravityIsOn(true), boxCounter(0), xOrigin(0), yOrigin(WIN_HEIGHT) {};
+	Manager();
 
 	bool isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension);
 	// returns true if two boxes are intersecting
@@ -69,6 +69,8 @@ public:
 	void deleteBox();
 
 	bool deleteBox(Box& toDelete);
+
+	bool isValidLoc(Box& box1);
 
 	void move(Box aBox);
 
