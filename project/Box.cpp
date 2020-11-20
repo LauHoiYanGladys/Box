@@ -29,9 +29,7 @@ void Box::draw()
 
 void Box::print(ofstream& outFile)
 {
-	outFile << label << endl;
-	outFile << comX << " " << comY << endl;
-	outFile << xDim << " " << yDim << endl;
-	outFile << hue << endl;
+	outFile << "\t" << comX << "\t" << comY << "\t" 
+		<<  xDim << "\t" << yDim << "\t" << hue << endl;
 
 }

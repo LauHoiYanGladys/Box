@@ -116,6 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,19 +142,26 @@
   <ItemGroup>
     <ClInclude Include="Box.h" />
     <ClInclude Include="Camera3D.h" />
+    <ClInclude Include="DrawingUtilNG.h" />
     <ClInclude Include="fssimplewindow.h" />
     <ClInclude Include="GraphicFont.h" />
     <ClInclude Include="Manager.h" />
     <ClInclude Include="OrbitingViewer.h" />
+    <ClInclude Include="StringPlus.h" />
+    <ClInclude Include="ysglfontdata.h" />
     <ClInclude Include="yspng.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Box.cpp" />
     <ClCompile Include="Camera3D.cpp" />
+    <ClCompile Include="DrawingUtilNG.cpp" />
     <ClCompile Include="fssimplewindow.cpp" />
     <ClCompile Include="GraphicFont.cpp" />
     <ClCompile Include="Manager.cpp" />
     <ClCompile Include="OrbitingViewer.cpp" />
     <ClCompile Include="project.cpp" />
+    <ClCompile Include="StringPlus.cpp" />
+    <ClCompile Include="ysglfontdata.c" />
     <ClCompile Include="yspng.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

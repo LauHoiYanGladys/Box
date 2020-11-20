@@ -70,6 +70,8 @@ public:
 
 	bool deleteBox(Box& toDelete);
 
+	bool isValidLoc(Box& box1);
+
 	void move(Box aBox);
 
 	void load();
