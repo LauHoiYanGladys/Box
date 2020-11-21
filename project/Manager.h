@@ -30,7 +30,7 @@ private:
 	double viewScale, zoomFactor, panChange;  // must be greater than zero
 
 	// when reading in boxes, need to assign these
-	double minX, maxX, minY, maxY;
+	double minX, maxX, minY, maxY, groundY;
 
 	Box* currBox;
 
@@ -106,5 +106,6 @@ public:
 	void highlightBox(Box& aBox);
 	void draw();
 	void getModelCoords(double& modelX, double& modelY, double screenX, double screenY);
+	void getScreenCoords(double modelX, double modelY, double& screenX, double& screenY);
 };
 

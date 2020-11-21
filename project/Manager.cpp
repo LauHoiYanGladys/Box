@@ -18,9 +18,10 @@ Manager::Manager()
 	gravityIsOn = true;
 
 	boxCounter = 0;
-	
+
 	xOrigin = 0;
 	yOrigin = WIN_HEIGHT;
+	groundY = WIN_HEIGHT;
 
 	maxX = 0;
 	maxY = 0;
@@ -31,41 +32,68 @@ Manager::Manager()
 
 	viewScale = 1.0;
 	panChange = 10;
-	zoomFactor = 1.1;
+	zoomFactor = 1.2;
 
 	getAvailableFiles(allModelfiles);
 
-	
+
 
 }
 
 bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension)
 {
 	double firstXInterval[] = { firstBox.getLeftUpperX(),  firstBox.getRightUpperX() };
-	double firstYInterval[] = { firstBox.getLeftUpperY(),  firstBox.getLeftLowerY() };
+	double firstYInterval[] = { firstBox.getLeftLowerY(),  firstBox.getLeftUpperY() };
 
 	double secondXInterval[] = { secondBox.getLeftUpperX(),  secondBox.getRightUpperX() };
-	double secondYInterval[] = { secondBox.getLeftUpperY(),  secondBox.getLeftLowerY() };
-
+	double secondYInterval[] = { secondBox.getLeftLowerY(),  secondBox.getLeftUpperY() };
+	cout << "x1: [" << firstXInterval[0] << "," << firstXInterval[1] << "]" << endl;
+	cout << "y1: [" << firstYInterval[0] << "," << firstYInterval[1] << "]" << endl;
+	cout << "x2: [" << secondXInterval[0] << "," << secondXInterval[1] << "]" << endl;
+	cout << "y2: [" << secondYInterval[0] << "," << secondYInterval[1] << "]" << endl;
 	if (theDimension == both) {
 		// Compare x-intervals, y-intervals and z-intervals spanned by the boxes. 
 		// If all three dimensions intersect, there is an intersection
-		if (((firstXInterval[0] > secondXInterval[0] && firstXInterval[0] < secondXInterval[1]) ||
+
+		//compare x intervals
+		if ((firstXInterval[0] >= secondXInterval[0] && firstXInterval[0] <= secondXInterval[1]) ||
+			(firstXInterval[1] >= secondXInterval[0] && firstXInterval[1] <= secondXInterval[1]) ||
+			(secondXInterval[0] >= firstXInterval[0] && secondXInterval[0] <= firstXInterval[1]) ||
+			(secondXInterval[1] >= firstXInterval[0] && secondXInterval[1] <= firstXInterval[1]))
+		{
+			if ((firstYInterval[0] >= secondYInterval[0] && firstYInterval[0] <= secondYInterval[1]) ||
+				(firstYInterval[1] >= secondYInterval[0] && firstYInterval[1] <= secondYInterval[1]))
+			{
+				cout << "intersecting" << endl;
+				return true;
+			}
+			
+
+		}
+		
+
+		/*if (((firstXInterval[0] > secondXInterval[0] && firstXInterval[0] < secondXInterval[1]) ||
 			(firstXInterval[1] > secondXInterval[0] && firstXInterval[1] < secondXInterval[1])) &&
 			((firstYInterval[0] > secondYInterval[0] && firstYInterval[0] < secondYInterval[1]) ||
 				(firstYInterval[1] > secondYInterval[0] && firstYInterval[1] < secondYInterval[1]))) {
+			cout << "Intersecting" << endl;
 			return true;
-		}
+			
+		}*/
+
 	}
 
 	else if (theDimension == x) {
 		if ((firstXInterval[0] > secondXInterval[0] && firstXInterval[0] < secondXInterval[1]) ||
 			(firstXInterval[1] > secondXInterval[0] && firstXInterval[1] < secondXInterval[1])) {
+			cout << "Intersecting " << endl;
 			return true;
+			
 		}
 	}
-
+	cout << "Not Intersecting" << endl;
 	return false;
+	
 }
 
 void Manager::showMenu()
@@ -109,16 +137,21 @@ bool Manager::manage()
 
 	key = FsInkey();
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
-			rightButton, locX, locY);
+		rightButton, locX, locY);
+
+	if (mouseEvent == FSMOUSEEVENT_LBUTTONDOWN || mouseEvent == FSMOUSEEVENT_MBUTTONDOWN || key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) {
+		prevLocX = locX; prevLocY = locY;  // capture location of first button press
+	}
+
 
 	if (middleButton || (FsGetKeyState(FSKEY_CTRL) && leftButton)) { // pan in x and y axes
-		
+		prevLocX = locX; prevLocY = locY;
 		xOrigin += (locX - prevLocX);
 		yOrigin += (locY - prevLocY);
 		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
 	}
 
-	else if (key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN // these also are triggered by touchpad pinch and two finger scroll
+	else if (((key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) && FsGetKeyState(FSKEY_CTRL)) // these also are triggered by touchpad pinch and two finger scroll
 		|| (FsGetKeyState(FSKEY_SHIFT) && leftButton)) { // zoom in and out
 		double oldScale = viewScale;
 		if (key == FSKEY_WHEELUP || locY < prevLocY)
@@ -126,7 +159,7 @@ bool Manager::manage()
 		else if (key == FSKEY_WHEELDOWN || locY > prevLocY)
 			viewScale /= (zoomFactor - 1) * 0.4 + 1.0;
 
-	
+
 		xOrigin = (int)round((locX * (oldScale - viewScale)
 			+ xOrigin * viewScale) / oldScale);
 		yOrigin = (int)round((locY * (oldScale - viewScale)
@@ -178,7 +211,7 @@ bool Manager::manage()
 		}
 
 		if (currBox != nullptr) {
-			highlightBox(*currBox);		
+			highlightBox(*currBox);
 		}
 	}
 
@@ -208,11 +241,14 @@ bool Manager::manage()
 	}
 
 	// draw boxes
+	draw();
 	for (auto& currBox : theBoxes) {
 		// draw the box
 		// update box position if gravity is on
 		if (gravityIsOn)
+		{
 			currBox.second.fall(0.025);
+		}
 	}
 
 	FsSwapBuffers();
@@ -224,7 +260,7 @@ bool Manager::manage()
 	//int mouseEvent, leftButton, middleButton, rightButton;
 	//int locX, locY;
 
-	
+
 
 	FsPollDevice();
 	key = FsInkey();
@@ -269,7 +305,7 @@ void Manager::readFile(ifstream& inFile)
 	stringstream currStream;
 	double comX, comY, xDim, yDim, hue;
 	bool firstTime = true;
-	
+
 
 	while (!inFile.eof()) {
 		getline(inFile, currLine);
@@ -287,7 +323,7 @@ void Manager::readFile(ifstream& inFile)
 
 			label = to_string(boxCounter);
 
-			
+
 			Box newBox(label, comX, comY, xDim, yDim, hue);
 
 			if (isValidLoc(newBox)) {
@@ -403,7 +439,7 @@ void Manager::editBox(Box& toEdit)
 
 void Manager::addBox()
 {
-	
+	cout << "Adding Box" << endl;
 	FsPollDevice();
 	int key = FsInkey();
 	int mouseEvent, leftButton, middleButton, rightButton;
@@ -413,24 +449,34 @@ void Manager::addBox()
 
 	getModelCoords(modelX, modelY, locX, locY);
 	string label = to_string(boxCounter);
-	double tempDim = 10;
+	boxCounter++;
+	double tempDim = 100;
 	double tempHue = 0;
 	Box toAdd(label, modelX, modelY, tempDim, tempDim, tempHue);
 	theBoxes.insert({ toAdd.getLabel(), toAdd });
+	auto currAdd = theBoxes.find(toAdd.getLabel());
 
 	//Set Width
 	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 	{
+		//cout << "Setting width = " << toAdd.getWidth() << endl;
+		//cout << "X = " << toAdd.getComX() << " Y = " << toAdd.getComY() << endl;
 		getModelCoords(modelX, modelY, locX, locY);
-		toAdd.setXY(modelX, modelY);
+
+
+		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			toAdd.setWidth(min(toAdd.getWidth() + 1, double(100))); //add max
+			currAdd->second.setWidth(min(currAdd->second.getWidth() + 4, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			toAdd.setWidth(max(toAdd.getWidth() - 1, double(1))); //add min
+			currAdd->second.setWidth(max(currAdd->second.getWidth() - 4, double(.05))); //add min
 
 		FsPollDevice();
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+		draw();
+		FsSwapBuffers();
+
 	}
 
 	FsPollDevice();
@@ -438,44 +484,59 @@ void Manager::addBox()
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	//Set Height
-	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+	do
 	{
+
+		cout << "Setting height = " << currAdd->second.getHeight() << endl;
 		getModelCoords(modelX, modelY, locX, locY);
-		toAdd.setXY(modelX, modelY);
+		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			toAdd.setHeight(min(toAdd.getHeight() + 1, double(100))); //add max
+			currAdd->second.setHeight(min(currAdd->second.getHeight() + 4, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			toAdd.setHeight(max(toAdd.getHeight() - 1, double(1))); //add min
+			currAdd->second.setHeight(max(currAdd->second.getHeight() - 4, double(1))); //add min
 
 		FsPollDevice();
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-	}
+
+		draw();
+		FsSwapBuffers();
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
 	FsPollDevice();
 	key = FsInkey();
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	//Set Color (Hue)
-	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+	do
 	{
+
 		getModelCoords(modelX, modelY, locX, locY);
-		toAdd.setXY(modelX, modelY);
+		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			toAdd.setHue(min((toAdd.getHue() + 3), double(360)));
+			currAdd->second.setHue(min((currAdd->second.getHue() + 3), double(360)));
 		if (key == FSKEY_WHEELDOWN)
-			toAdd.setHue(max((toAdd.getHue() - 3), double(0)));
+			currAdd->second.setHue(max((currAdd->second.getHue() - 3), double(0)));
 
 		FsPollDevice();
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-	}
 
-	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
-		//add loop to select final location
+		draw();
+		FsSwapBuffers();
 
-		if (!isValidLoc(toAdd))
-			deleteBox(toAdd);
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+
+	do
+	{
+		getModelCoords(modelX, modelY, locX, locY);
+		currAdd->second.setXY(modelX, modelY);
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+
+	if (!isValidLoc(currAdd->second))
+		deleteBox(currAdd->second);
+	else
+		assignYDistanceFromBelow(currAdd->second);
 
 }
 
@@ -520,9 +581,13 @@ bool Manager::isValidLoc(Box& box1)
 	for (auto& box2 : theBoxes)
 	{
 		if (box1.getLabel().compare(box2.first) == 0)
+		{
+			cout << "can't compare box against itself" << endl;
 			continue;
+		}
 		else
 		{
+			cout << "comparing Box against " << box2.first << endl;
 			if (isIntersecting(box1, box2.second, both))
 				return false;
 		}
@@ -561,26 +626,25 @@ void Manager::save()
 void Manager::assignYDistanceFromBelow(Box& aBox)
 {
 	// if on ground or on box (onGround and onBox can be a boolean member variable of Box), return false
-	if (aBox.isOnBox() || aBox.isOnGround())
-		aBox.setYDistanceFromBelow(0.);
-	else {
-		double currYMax = 0.;
-		for (auto& currBox : theBoxes) {
-			// loop through all other boxes with max y smaller than min y of the box 
-			//not sure if != works properly with strings. I think .compare() is needed
-			if (currBox.first != aBox.getLabel() && currBox.second.getMaxY() < aBox.getMinY()) {
-				// and check for intersection in x- and -z interval with the box in question
-				if (isIntersecting(currBox.second, aBox, x)) {
-					if (currBox.second.getMaxY() > currYMax)
-						currYMax = currBox.second.getMaxY();
-				}
+	/*if (aBox.isOnBox() || aBox.isOnGround())
+		aBox.setYDistanceFromBelow(0.);*/
 
+	double currYMax = 0.;
+	for (auto& currBox : theBoxes) {
+		// loop through all other boxes with max y smaller than min y of the box 
+		//not sure if != works properly with strings. I think .compare() is needed
+		if (currBox.first != aBox.getLabel() && currBox.second.getMaxY() < aBox.getMinY()) {
+			// and check for intersection in x- and -z interval with the box in question
+			if (isIntersecting(currBox.second, aBox, x)) {
+				if (currBox.second.getMaxY() > currYMax)
+					currYMax = currBox.second.getMaxY();
 			}
+			
 		}
-		aBox.setYDistanceFromBelow(currYMax);
 	}
-
+	aBox.setYDistanceFromBelow(currYMax);
 }
+
 
 Box* Manager::findBox(double x, double y, double distance)
 {
@@ -710,7 +774,7 @@ void Manager::highlightBox(Box& aBox)
 {
 	glLineWidth(3);
 	glColor3ub(0, 255, 0);
-	aBox.draw();
+	//aBox.draw();
 	glLineWidth(1);
 
 }
@@ -727,12 +791,19 @@ void Manager::draw()
 		theBoxes[i].draw();
 	}
 	*/
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	for (unordered_map<string, Box>::iterator it = theBoxes.begin(); it != theBoxes.end(); it++) {
 		//Get color
 		DrawingUtilNG::hsv2rgb(it->second.getHue(), 1, 1, red, green, blue);
 		glColor3f(red, green, blue);
 		// Draw boxes
-		it->second.draw();
+		//it->second.draw();
+		double screenX, screenY, screenW, screenH;
+		getScreenCoords(it->second.getComX(), it->second.getComY(), screenX, screenY);
+		screenW = it->second.getWidth() * viewScale;
+		screenH = it->second.getHeight() * viewScale;
+		DrawingUtilNG::drawRectangle(screenX - 0.5 * screenW, screenY - 0.5 * screenH,screenW, screenH, true);
+
 
 	}
 
@@ -743,4 +814,10 @@ void Manager::getModelCoords(double& modelX, double& modelY, double screenX, dou
 {
 	modelX = (screenX - xOrigin) / viewScale;
 	modelY = (screenY - yOrigin) / -viewScale;
+}
+
+void Manager::getScreenCoords(double modelX, double modelY, double& screenX, double& screenY)
+{
+	screenX = modelX * viewScale + xOrigin;
+	screenY = modelY * -viewScale + yOrigin;
 }

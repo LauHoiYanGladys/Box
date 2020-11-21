@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+
 using namespace std;
 
 class Box {
@@ -39,10 +40,25 @@ public:
 		yDistanceFromBelow = 0;
 	}
 
-	double getLeftUpperX() { return leftUpperX; }
+	void setBounds() {
+		leftUpperX = comX - 0.5 * xDim;
+		leftUpperY = comY + 0.5 * yDim;
+		rightUpperX = comX + 0.5 * xDim;
+		rightUpperY = comY + 0.5 * yDim;
+		leftLowerX = comX - 0.5 * xDim;
+		leftLowerY = comY - 0.5 * yDim;
+		rightLowerX = comX + 0.5 * xDim;
+		rightLowerY = comY - 0.5 * yDim;
+	}
+	
 	double getRightUpperX() { return rightUpperX; }
+	double getRightLowerX() { return rightLowerX; }
+	double getRightUpperY() { return rightUpperY; }
+	double getRightLowerY() { return rightLowerY; }
+	double getLeftUpperX() { return leftUpperX; }
+	double getLeftLowerX() { return leftLowerX; }
 	double getLeftUpperY() { return leftUpperY; }
-	double getLeftLowerY() { return rightUpperX; }
+	double getLeftLowerY() { return leftLowerY; }
 	double getMaxX() { return maxX; }
 	double getMaxY() { return maxY; }
 	double getMinX() { return minX; }
@@ -57,17 +73,18 @@ public:
 	double getVelocity() { return velocity; }
 	double getFallDuration() { return fallDuration; }
 
-	void setComX(double X) { comX = X; }
-	void setComY(double Y) { comX = Y; }
+	void setComX(double X) { comX = X; setBounds();}
+	void setComY(double Y) { comX = Y; setBounds(); }
 
 	double getWidth() { return xDim; }
 	double getHeight() { return yDim; }
 	double getHue() { return hue; }
+	
 
-	double setWidth(double width) { xDim = width; }
-	double setHeight(double height) { yDim = height; }
-	double setXY(double xCoord, double yCoord) { comX = xCoord, comY = yCoord; }
-	double setHue(double theHue) { hue = theHue; }
+	void setWidth(double width) { xDim = width; setBounds(); }
+	void setHeight(double height) { yDim = height; setBounds(); }
+	void setXY(double xCoord, double yCoord) { comX = xCoord, comY = yCoord; setBounds(); }
+	void setHue(double theHue) { hue = theHue;  }
 
 
 	void fall(double deltaT);
@@ -84,7 +101,8 @@ public:
 
 	void print(ofstream& outFile);
 
-	void draw();
+	//void draw();
+
 
 	void getParams(double& tX, double& tY, double& tH, double& tW, double& tHue) {
 		tX = comX;

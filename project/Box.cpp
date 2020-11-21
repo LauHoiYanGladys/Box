@@ -21,11 +21,13 @@ void Box::fall(double deltaT)
 	
 }
 
-void Box::draw()
-{
-	// bool filled = true;
-	DrawingUtilNG::drawRectangle(comX, comY, xDim, yDim, true);
-}
+//void Box::draw()
+//{
+//	// bool filled = true;
+//
+//	DrawingUtilNG::drawRectangle(comX, comY, xDim, yDim, true);
+//	//cout << "Drawing Box (" << comX << "," << comY << ") " << endl;
+//}
 
 void Box::print(ofstream& outFile)
 {
