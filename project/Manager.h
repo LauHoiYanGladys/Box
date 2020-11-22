@@ -1,12 +1,14 @@
 #pragma once
-
+#include <stack> 
 #include <unordered_map>
 #include <vector>
 #include "Box.h"
 #include "StringPlus.h"
+#include "Camera3D.h"
+#include "OrbitingViewer.h"
 
-#define WIN_WIDTH 800
-#define WIN_HEIGHT 600
+#define WIN_WIDTH 1200
+#define WIN_HEIGHT 800
 
 enum overlappingDimension {x, both};
 
@@ -38,6 +40,10 @@ private:
 
 	int boxCounter;
 
+	double modelComX, modelComY, modelComZ;
+
+	vector<std::unordered_map<std::string, Box>> boxStates;
+
 public:
 	Manager();
 
@@ -58,9 +64,11 @@ public:
 
 	void showMenu();
 
-	bool manage();
+	bool manage(Camera3D& camera, OrbitingViewer& orbit);
 
-	void addBox();
+	void drawAxes();
+
+	void addBox(Camera3D& camera, OrbitingViewer& orbit);
 
 	void editBox();
 
@@ -107,5 +115,9 @@ public:
 	void draw();
 	void getModelCoords(double& modelX, double& modelY, double screenX, double screenY);
 	void getScreenCoords(double modelX, double modelY, double& screenX, double& screenY);
+	void snapFaceOn(OrbitingViewer& orbit, Camera3D& camera);
+	void updateModelCom(Box& newBox);
+	void storeState(std::unordered_map<std::string, Box> theBoxes);
+	void restoreState();
 };
 

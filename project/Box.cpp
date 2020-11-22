@@ -5,14 +5,16 @@
 #include "DrawingUtilNG.h"
 
 const double GRAVITY = 9.80665;  // this implies units are meters and seconds
-
+// Gladys
 void Box::fall(double deltaT)
 {
 	// Box class has Y-coordinate of COM (comY), velocity, fallDuration. There is also a constant gravity for all
 
-	if (yDistanceFromBelow > 0.) {
-		comY -= velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT;
-		yDistanceFromBelow -= velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT;
+	if (comY > 0.) {
+		/*setComY(comY - (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT));*/
+		comY -= (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT);
+		setBounds();
+		yDistanceFromBelow -= (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT);
 
 		// recalculates currVel by applying currAccel for deltaT
 		velocity += GRAVITY * deltaT;

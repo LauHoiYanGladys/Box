@@ -127,6 +127,93 @@ void DrawingUtilNG::drawRectangle(double x, double y, int sizeX, int sizeY, bool
 	glEnd();
 }
 
+void DrawingUtilNG::drawRectangle3D(double x, double y, int sizeX, int sizeY, double hue, bool filled)
+{
+	
+	double red, green, blue;
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1, 1);
+
+	glBegin(GL_QUADS);
+
+	DrawingUtilNG::hsv2rgb(hue, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+
+	//if (sixColors)
+	//	glColor3ub(0, 0, 255);  // blue face
+	glVertex3d(x, y, 0);
+	glVertex3d(x + sizeX, y, 0);
+	glVertex3d(x + sizeX, y + sizeY, 0);
+	glVertex3d(x, y + sizeY, 0);
+
+	//glVertex2i(x, y);
+	//glVertex2i(x + sizeX, y);
+	//glVertex2i(x + sizeX, y + sizeY);
+	//glVertex2i(x, y + sizeY);
+
+
+	//DrawingUtilNG::hsv2rgb(hue + 10, 1, 1, red, green, blue);
+	//glColor3f(red, green, blue);
+	////if (sixColors)
+	////	glColor3ub(0, 255, 0);  // green
+	//glVertex3d(x1, y1, z2);
+	//glVertex3d(x2, y1, z2);
+	//glVertex3d(x2, y2, z2);
+	//glVertex3d(x1, y2, z2);
+
+	//DrawingUtilNG::hsv2rgb(hue + 20, 1, 1, red, green, blue);
+	//glColor3f(red, green, blue);
+	////if (sixColors)
+	////	glColor3ub(0, 255, 255); // cyan
+	//glVertex3d(x1, y1, z1);
+	//glVertex3d(x2, y1, z1);
+	//glVertex3d(x2, y1, z2);
+	//glVertex3d(x1, y1, z2);
+
+	//DrawingUtilNG::hsv2rgb(hue + 30, 1, 1, red, green, blue);
+	//glColor3f(red, green, blue);
+	////if (sixColors)
+	////	glColor3ub(255, 0, 0);  // red
+	//glVertex3d(x1, y2, z1);
+	//glVertex3d(x2, y2, z1);
+	//glVertex3d(x2, y2, z2);
+	//glVertex3d(x1, y2, z2);
+
+	//DrawingUtilNG::hsv2rgb(hue + 40, 1, 1, red, green, blue);
+	//glColor3f(red, green, blue);
+	////if (sixColors)
+	////	glColor3ub(255, 0, 255); // magenta
+	//glVertex3d(x1, y1, z1);
+	//glVertex3d(x1, y2, z1);
+	//glVertex3d(x1, y2, z2);
+	//glVertex3d(x1, y1, z2);
+
+	//DrawingUtilNG::hsv2rgb(hue + 50, 1, 1, red, green, blue);
+	//glColor3f(red, green, blue);
+	////if (sixColors)
+	////	glColor3ub(255, 255, 0);  // yellow
+	//glVertex3d(x2, y1, z1);
+	//glVertex3d(x2, y2, z1);
+	//glVertex3d(x2, y2, z2);
+	//glVertex3d(x2, y1, z2);
+
+	glEnd();
+
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	
+	if (filled)
+		glBegin(GL_POLYGON);
+	else
+		glBegin(GL_LINE_LOOP);
+
+	glVertex2i(x, y);
+	glVertex2i(x + sizeX, y);
+	glVertex2i(x + sizeX, y + sizeY);
+	glVertex2i(x, y + sizeY);
+
+	glEnd();
+}
+
 void DrawingUtilNG::drawStar(double centerX, double centerY,
 	double outerSize, double innerSize, int numbPoints, double startAngle, bool filled)
 {
@@ -397,52 +484,65 @@ void DrawingUtilNG::drawCube(vertexF v1, vertexF v2, bool sixColors)
 }
 
 void DrawingUtilNG::drawCube(double x1, double y1, double z1,
-	double x2, double y2, double z2, bool sixColors/*, GraphicFont* aFont*/)
+	double x2, double y2, double z2, double hue/*, bool sixColors, GraphicFont* aFont*/)
 {
+	double red, green, blue;
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(1, 1);
 
 	glBegin(GL_QUADS);
 
-	if (sixColors)
-		glColor3ub(0, 0, 255);  // blue face
+	DrawingUtilNG::hsv2rgb(hue, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+
+	//if (sixColors)
+	//	glColor3ub(0, 0, 255);  // blue face
 	glVertex3d(x1, y1, z1);
 	glVertex3d(x2, y1, z1);
 	glVertex3d(x2, y2, z1);
 	glVertex3d(x1, y2, z1);
 
 
-
-	if (sixColors)
-		glColor3ub(0, 255, 0);  // green
+	DrawingUtilNG::hsv2rgb(hue+10, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+	//if (sixColors)
+	//	glColor3ub(0, 255, 0);  // green
 	glVertex3d(x1, y1, z2);
 	glVertex3d(x2, y1, z2);
 	glVertex3d(x2, y2, z2);
 	glVertex3d(x1, y2, z2);
 
-	if (sixColors)
-		glColor3ub(0, 255, 255); // cyan
+	DrawingUtilNG::hsv2rgb(hue + 20, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+	//if (sixColors)
+	//	glColor3ub(0, 255, 255); // cyan
 	glVertex3d(x1, y1, z1);
 	glVertex3d(x2, y1, z1);
 	glVertex3d(x2, y1, z2);
 	glVertex3d(x1, y1, z2);
 
-	if (sixColors)
-		glColor3ub(255, 0, 0);  // red
+	DrawingUtilNG::hsv2rgb(hue + 30, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+	//if (sixColors)
+	//	glColor3ub(255, 0, 0);  // red
 	glVertex3d(x1, y2, z1);
 	glVertex3d(x2, y2, z1);
 	glVertex3d(x2, y2, z2);
 	glVertex3d(x1, y2, z2);
 
-	if (sixColors)
-		glColor3ub(255, 0, 255); // magenta
+	DrawingUtilNG::hsv2rgb(hue + 40, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+	//if (sixColors)
+	//	glColor3ub(255, 0, 255); // magenta
 	glVertex3d(x1, y1, z1);
 	glVertex3d(x1, y2, z1);
 	glVertex3d(x1, y2, z2);
 	glVertex3d(x1, y1, z2);
 
-	if (sixColors)
-		glColor3ub(255, 255, 0);  // yellow
+	DrawingUtilNG::hsv2rgb(hue + 50, 1, 1, red, green, blue);
+	glColor3f(red, green, blue);
+	//if (sixColors)
+	//	glColor3ub(255, 255, 0);  // yellow
 	glVertex3d(x2, y1, z1);
 	glVertex3d(x2, y2, z1);
 	glVertex3d(x2, y2, z2);

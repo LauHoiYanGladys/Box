@@ -2,7 +2,7 @@
 #include <string>
 
 //#include "GraphicFont.h"
-//class GraphicFont;   // needed because GraphicFont.h includes DrawingUtilNG.h
+class GraphicFont;   // needed because GraphicFont.h includes DrawingUtilNG.h
 
 namespace DrawingUtilNG {
 	// this can be used as a vertex coordinates or a 3-D vector definition
@@ -30,6 +30,7 @@ namespace DrawingUtilNG {
 	// draws common shapes, filled in or not
 	void drawCircle(double centerX, double centerY, double radius, bool filled);
 	void drawRectangle(double x, double y, int sizeX, int sizeY, bool filled);
+	void drawRectangle3D(double x, double y, int sizeX, int sizeY, double hue, bool filled);
 
 	// many-pointed start, given outer and inner size, startAngle assures one
 	// point is at that angle (used to animate rotation)
@@ -57,7 +58,7 @@ namespace DrawingUtilNG {
 
 	void drawCube(vertexF v1, vertexF v2, bool sixColors = false);
 	void drawCube(double x1, double y1, double z1,
-		double x2, double y2, double z2, bool sixColors = false/*, GraphicFont* aFont = NULL*/);
+		double x2, double y2, double z2, double hue/*, bool sixColors = false, GraphicFont* aFont = NULL*/);
 
 	bool buildStringFromFsInkey(int key, std::string& currString);
 };

@@ -8,6 +8,9 @@
 #include "DrawingUtilNG.h"
 #include "fssimplewindow.h"
 #include "ysglfontdata.h"
+#include "Camera3D.h"
+#include "OrbitingViewer.h"
+#include "GraphicFont.h"
 
 
 using namespace std;
@@ -15,12 +18,14 @@ using namespace std;
 Manager::Manager()
 {
 	editModeIsOn = false;
-	gravityIsOn = true;
+	gravityIsOn = false;
 
 	boxCounter = 0;
 
-	xOrigin = 0;
-	yOrigin = WIN_HEIGHT;
+	//xOrigin = 0;
+	//yOrigin = WIN_HEIGHT;
+	xOrigin = 0.5*WIN_WIDTH;
+	yOrigin = 0.5*WIN_HEIGHT;
 	groundY = WIN_HEIGHT;
 
 	maxX = 0;
@@ -36,10 +41,12 @@ Manager::Manager()
 
 	getAvailableFiles(allModelfiles);
 
-
+	modelComX = 0;
+	modelComY = 0;
+	modelComZ = 0;
 
 }
-
+// Gladys
 bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension)
 {
 	double firstXInterval[] = { firstBox.getLeftUpperX(),  firstBox.getRightUpperX() };
@@ -70,22 +77,13 @@ bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension
 			
 
 		}
-		
-
-		/*if (((firstXInterval[0] > secondXInterval[0] && firstXInterval[0] < secondXInterval[1]) ||
-			(firstXInterval[1] > secondXInterval[0] && firstXInterval[1] < secondXInterval[1])) &&
-			((firstYInterval[0] > secondYInterval[0] && firstYInterval[0] < secondYInterval[1]) ||
-				(firstYInterval[1] > secondYInterval[0] && firstYInterval[1] < secondYInterval[1]))) {
-			cout << "Intersecting" << endl;
-			return true;
-			
-		}*/
-
 	}
 
 	else if (theDimension == x) {
-		if ((firstXInterval[0] > secondXInterval[0] && firstXInterval[0] < secondXInterval[1]) ||
-			(firstXInterval[1] > secondXInterval[0] && firstXInterval[1] < secondXInterval[1])) {
+		if ((firstXInterval[0] >= secondXInterval[0] && firstXInterval[0] <= secondXInterval[1]) ||
+			(firstXInterval[1] >= secondXInterval[0] && firstXInterval[1] <= secondXInterval[1]) ||
+			(secondXInterval[0] >= firstXInterval[0] && secondXInterval[0] <= firstXInterval[1]) ||
+			(secondXInterval[1] >= firstXInterval[0] && secondXInterval[1] <= firstXInterval[1])) {
 			cout << "Intersecting " << endl;
 			return true;
 			
@@ -123,21 +121,32 @@ void Manager::showMenu()
 	cout << "Panning and Zooming" << endl;
 	cout << "    Use arrow keys on screen to pan model up/down/left/right" << endl;
 	cout << "    Use +/- to zoom into (bigger) and out of (smaller), respectively" << endl;
-	cout << "    Z : zoom-all so that model is centered" << endl;
+	cout << "    Z : see all boxes face-on" << endl;
 	cout << "        CTRL+mouse to pan, SHIFT+mouse to zoom or use mouse wheel" << endl;
 	cout << endl;
 }
 
-bool Manager::manage()
+bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 {
 	bool boxIsMoving = false;
 	FsPollDevice();
 	int key, mouseEvent, leftButton, middleButton, rightButton;
 	int locX, locY, prevLocX, prevLocY;
+	double modelX, modelY;
+
+	int wid, hei;
+	FsGetWindowSize(wid, hei);
+
+	double vx, vy, vz;
 
 	key = FsInkey();
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
 		rightButton, locX, locY);
+
+	getModelCoords(modelX, modelY, locX, locY);
+
+	cout << "mouse X model position: " << modelX << endl;
+	cout << "mouse Y model position: " << modelY << endl;
 
 	if (mouseEvent == FSMOUSEEVENT_LBUTTONDOWN || mouseEvent == FSMOUSEEVENT_MBUTTONDOWN || key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) {
 		prevLocX = locX; prevLocY = locY;  // capture location of first button press
@@ -167,34 +176,84 @@ bool Manager::manage()
 
 		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
 	}
+	if (key == FSKEY_U)
+		restoreState();
+	
+	if (FsGetKeyState(FSKEY_LEFT)) {
+		orbit.h += Camera3D::PI / 180.0;
+	}		
+	if (FsGetKeyState(FSKEY_RIGHT))
+		orbit.h -= Camera3D::PI / 180.0;
+	if (FsGetKeyState(FSKEY_UP))
+		orbit.p += Camera3D::PI / 180.0;
+	if (FsGetKeyState(FSKEY_DOWN))
+		orbit.p -= Camera3D::PI / 180.0;
+	if (FsGetKeyState(FSKEY_F) && orbit.dist > 0.5){
+		orbit.dist /= 1.05;
+		viewScale *= 1.05;
+	}
+
+	if (FsGetKeyState(FSKEY_B) && orbit.dist < camera.farZ * .8) {
+		orbit.dist *= 1.05;
+		viewScale /= 1.05;
+	}
+		
+	if (FsGetKeyState(FSKEY_J))
+		orbit.focusX += 2.;
+	if (FsGetKeyState(FSKEY_L))
+		orbit.focusX -= 2.;
+	if (FsGetKeyState(FSKEY_I))
+		orbit.focusY += 2.;
+	if (FsGetKeyState(FSKEY_K))
+		orbit.focusY -= 2.;
+
+	if (key == FSKEY_Z)
+		snapFaceOn(orbit, camera);
+
+	orbit.setUpCamera(camera);
+
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	glViewport(0, 0, wid, hei);
+
+	// Set up 3D drawing
+	camera.setUpCameraProjection();
+	camera.setUpCameraTransformation();
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1, 1);
+
+	glColor3ub(93, 290, 112);
 
 
 	switch (key) {
 
 	case FSKEY_E: editModeIsOn = !editModeIsOn;
 		break;
+	case FSKEY_SPACE: gravityIsOn = !gravityIsOn;
+		break;
+	//case FSKEY_UP: yOrigin += panChange;
+	//	break;
+	//case FSKEY_DOWN: yOrigin -= panChange;
+	//	break;
+	//case FSKEY_LEFT: xOrigin += panChange;
+	//	break;
+	//case FSKEY_RIGHT: xOrigin -= panChange;
+	//	break;
 
-	case FSKEY_UP: yOrigin += panChange;
-		break;
-	case FSKEY_DOWN: yOrigin -= panChange;
-		break;
-	case FSKEY_LEFT: xOrigin += panChange;
-		break;
-	case FSKEY_RIGHT: xOrigin -= panChange;
-		break;
+	//case FSKEY_PLUS: viewScale *= zoomFactor;
+	//	break;
+	//case FSKEY_MINUS: viewScale /= zoomFactor;
+	//	break;
 
-	case FSKEY_PLUS: viewScale *= zoomFactor;
-		break;
-	case FSKEY_MINUS: viewScale /= zoomFactor;
-		break;
-
-	case FSKEY_Q: addBox();
+	case FSKEY_Q: addBox(camera, orbit);
 		break;
 	case FSKEY_W: deleteBox();
 		break;
 
 	}
-
+	// Gladys
 	// if in edit mode
 	if (editModeIsOn) {
 		double red, green, blue;
@@ -215,7 +274,7 @@ bool Manager::manage()
 		}
 	}
 
-
+	// Gladys
 	// selecting boxes
 	if (editModeIsOn && mouseEvent == FSMOUSEEVENT_LBUTTONDOWN && currBox != nullptr) {
 		// add current box to selected boxes if not already there
@@ -240,14 +299,39 @@ bool Manager::manage()
 		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
 	}
 
-	// draw boxes
+	// Set up 2D drawing
+	//glMatrixMode(GL_PROJECTION);
+	//glLoadIdentity();
+	//glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+
+	//glMatrixMode(GL_MODELVIEW);
+	//glLoadIdentity();
+
+	/*comicsans.drawText("I'm Orbiting!", 10, 60, .25);
+
+	std::string data;
+	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
+	comicsans.setColorHSV(300, 1, .5);
+	comicsans.drawText(data, 10, 80, .15);
+
+	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+	comicsans.drawText(data, 10, 95, .15);*/
+
+	//// draw boxes
+	//snapFaceOn(orbit, camera);
 	draw();
+	
+	// draw axes
+	drawAxes();
+
 	for (auto& currBox : theBoxes) {
 		// draw the box
 		// update box position if gravity is on
 		if (gravityIsOn)
 		{
-			currBox.second.fall(0.025);
+			/*currBox.second.fall(0.025);*/
+			currBox.second.fall(0.1);
 		}
 	}
 
@@ -261,18 +345,39 @@ bool Manager::manage()
 	//int locX, locY;
 
 
-
-	FsPollDevice();
-	key = FsInkey();
-	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
-		rightButton, locX, locY);
+	// the following code seems to make it so Q has to be pressed multiple times to add a block
+	//FsPollDevice();
+	//key = FsInkey();
+	//mouseEvent = FsGetMouseEvent(leftButton, middleButton,
+	//	rightButton, locX, locY);
 
 	return (key != FSKEY_ESC);
 }
 
+void Manager::drawAxes() {
+	int length = 30;
+	glLineWidth(6);
 
+	glColor3ub(255, 0, 0);  // X (red)
+	glBegin(GL_LINES);
+	glVertex3i(0, 0, 0);
+	glVertex3i(length, 0, 0);
+	glEnd();
 
+	glColor3ub(0, 255, 0);  // Y (green)
+	glBegin(GL_LINES);
+	glVertex3i(0, 0, 0);
+	glVertex3i(0, length, 0);
+	glEnd();
 
+	glColor3ub(0, 0, 255);  // Z (blue)
+	glBegin(GL_LINES);
+	glVertex3i(0, 0, 0);
+	glVertex3i(0, 0, length);
+	glEnd();
+}
+
+// Gladys
 void Manager::load()
 {
 	string inFileName;
@@ -298,7 +403,7 @@ void Manager::load()
 	centerOnScreen();
 
 }
-
+// Gladys
 void Manager::readFile(ifstream& inFile)
 {
 	string currLine, label;
@@ -437,8 +542,10 @@ void Manager::editBox(Box& toEdit)
 
 }
 
-void Manager::addBox()
+void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 {
+	// remember the current state before making changes
+	boxStates.push_back(theBoxes);
 	cout << "Adding Box" << endl;
 	FsPollDevice();
 	int key = FsInkey();
@@ -450,7 +557,7 @@ void Manager::addBox()
 	getModelCoords(modelX, modelY, locX, locY);
 	string label = to_string(boxCounter);
 	boxCounter++;
-	double tempDim = 100;
+	double tempDim = 10;
 	double tempHue = 0;
 	Box toAdd(label, modelX, modelY, tempDim, tempDim, tempHue);
 	theBoxes.insert({ toAdd.getLabel(), toAdd });
@@ -475,6 +582,7 @@ void Manager::addBox()
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 		draw();
+		drawAxes();
 		FsSwapBuffers();
 
 	}
@@ -487,7 +595,7 @@ void Manager::addBox()
 	do
 	{
 
-		cout << "Setting height = " << currAdd->second.getHeight() << endl;
+		/*cout << "Setting height = " << currAdd->second.getHeight() << endl;*/
 		getModelCoords(modelX, modelY, locX, locY);
 		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
@@ -500,6 +608,7 @@ void Manager::addBox()
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 		draw();
+		drawAxes();
 		FsSwapBuffers();
 	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
@@ -523,6 +632,7 @@ void Manager::addBox()
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 		draw();
+		drawAxes();
 		FsSwapBuffers();
 
 	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
@@ -535,8 +645,11 @@ void Manager::addBox()
 
 	if (!isValidLoc(currAdd->second))
 		deleteBox(currAdd->second);
-	else
+	else {
 		assignYDistanceFromBelow(currAdd->second);
+		
+	}
+		
 
 }
 
@@ -595,7 +708,7 @@ bool Manager::isValidLoc(Box& box1)
 	return true;
 }
 
-
+// Gladys
 void Manager::save()
 {
 	string outFileName;
@@ -622,30 +735,31 @@ void Manager::save()
 		cout << "Was not able to open " << outFileName << " for output. " << endl;
 
 }
-
+// Gladys
 void Manager::assignYDistanceFromBelow(Box& aBox)
 {
 	// if on ground or on box (onGround and onBox can be a boolean member variable of Box), return false
 	/*if (aBox.isOnBox() || aBox.isOnGround())
 		aBox.setYDistanceFromBelow(0.);*/
 
-	double currYMax = 0.;
+	double currYMax = 0;
 	for (auto& currBox : theBoxes) {
 		// loop through all other boxes with max y smaller than min y of the box 
 		//not sure if != works properly with strings. I think .compare() is needed
-		if (currBox.first != aBox.getLabel() && currBox.second.getMaxY() < aBox.getMinY()) {
+		if (currBox.first.compare(aBox.getLabel()) != 0 && currBox.second.getMaxY() < aBox.getMinY()) {
 			// and check for intersection in x- and -z interval with the box in question
 			if (isIntersecting(currBox.second, aBox, x)) {
 				if (currBox.second.getMaxY() > currYMax)
+
 					currYMax = currBox.second.getMaxY();
 			}
 			
 		}
 	}
-	aBox.setYDistanceFromBelow(currYMax);
+	aBox.setYDistanceFromBelow(aBox.getMinY() - currYMax);
 }
 
-
+// Gladys
 Box* Manager::findBox(double x, double y, double distance)
 {
 	// iterate through theBoxes
@@ -662,7 +776,7 @@ Box* Manager::findBox(double x, double y, double distance)
 
 	return nullptr;
 }
-
+// Gladys
 Box* Manager::findBox(const string& givenLabel)
 {
 	string searchFor = StringPlus::trim(givenLabel);
@@ -674,7 +788,7 @@ Box* Manager::findBox(const string& givenLabel)
 
 	return nullptr;
 }
-
+// Gladys
 string Manager::getFileFromScreen(vector<string>& availableFiles, const string& prompt)
 {
 
@@ -731,7 +845,7 @@ string Manager::getFileFromScreen(vector<string>& availableFiles, const string& 
 		return "";
 
 }
-
+// Gladys
 void Manager::getAvailableFiles(vector<string>& availableFiles)
 {
 	availableFiles.clear();
@@ -746,7 +860,7 @@ void Manager::getAvailableFiles(vector<string>& availableFiles)
 			availableFiles.push_back(currFileName.substr(2));
 	}
 }
-
+// Gladys
 void Manager::centerOnScreen()
 {
 	double scaleX = WIN_WIDTH / (maxX - minX);
@@ -755,7 +869,7 @@ void Manager::centerOnScreen()
 	xOrigin = WIN_WIDTH / 2 - viewScale * (maxX + minX) / 2;
 	yOrigin = WIN_HEIGHT / 2 + viewScale * (maxY + minY) / 2;
 }
-
+// Gladys
 void Manager::drawEditModeIndicator()
 {
 	glLineWidth(4);
@@ -769,7 +883,7 @@ void Manager::drawEditModeIndicator()
 	YsGlDrawFontBitmap8x12("Edit Mode");
 
 }
-
+// Gladys
 void Manager::highlightBox(Box& aBox)
 {
 	glLineWidth(3);
@@ -794,20 +908,20 @@ void Manager::draw()
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	for (unordered_map<string, Box>::iterator it = theBoxes.begin(); it != theBoxes.end(); it++) {
 		//Get color
-		DrawingUtilNG::hsv2rgb(it->second.getHue(), 1, 1, red, green, blue);
-		glColor3f(red, green, blue);
+		/*DrawingUtilNG::hsv2rgb(it->second.getHue(), 1, 1, red, green, blue);
+		glColor3f(red, green, blue);*/
 		// Draw boxes
 		//it->second.draw();
-		double screenX, screenY, screenW, screenH;
-		getScreenCoords(it->second.getComX(), it->second.getComY(), screenX, screenY);
-		screenW = it->second.getWidth() * viewScale;
-		screenH = it->second.getHeight() * viewScale;
-		DrawingUtilNG::drawRectangle(screenX - 0.5 * screenW, screenY - 0.5 * screenH,screenW, screenH, true);
-
-
+		//double screenX, screenY, screenW, screenH;
+		//getScreenCoords(it->second.getComX(), it->second.getComY(), screenX, screenY);
+		//screenW = it->second.getWidth() * viewScale;
+		//screenH = it->second.getHeight() * viewScale;
+		DrawingUtilNG::drawRectangle3D(it->second.getComX(), it->second.getComY(), it->second.getWidth(), it->second.getHeight(), it->second.getHue(), true);
 	}
+	
 
 }
+
 
 
 void Manager::getModelCoords(double& modelX, double& modelY, double screenX, double screenY)
@@ -820,4 +934,34 @@ void Manager::getScreenCoords(double modelX, double modelY, double& screenX, dou
 {
 	screenX = modelX * viewScale + xOrigin;
 	screenY = modelY * -viewScale + yOrigin;
+
+}
+
+void Manager::snapFaceOn(OrbitingViewer& orbit, Camera3D& camera)
+{
+	orbit.initialize();
+	orbit.setUpCamera(camera);
+}
+
+void Manager::updateModelCom(Box& newBox)
+{
+	int numBoxes = (int) theBoxes.size();
+	modelComX = (modelComX * (numBoxes - 1) + newBox.getComX()) / numBoxes;
+	modelComY = (modelComY * (numBoxes - 1) + newBox.getComY()) / numBoxes;
+}
+
+void Manager::storeState(std::unordered_map<std::string, Box> theBoxes) {
+	// store a maximum of five states
+	if (boxStates.size() == 5)
+		boxStates.erase(boxStates.begin());
+	boxStates.push_back(theBoxes);
+}
+
+void Manager::restoreState() {
+	if (!boxStates.empty()) {
+		theBoxes = boxStates.back();
+		boxStates.pop_back();
+	}
+		
+
 }

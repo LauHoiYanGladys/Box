@@ -2,6 +2,10 @@
 #include "fssimplewindow.h"
 #include "Manager.h"
 #include "Box.h"
+#include "Camera3D.h"
+#include "OrbitingViewer.h"
+#include "ysglfontdata.h"
+#include "GraphicFont.h"
 
 using namespace std;
 
@@ -14,8 +18,22 @@ int main(void) {
 	// set up graphics window
 	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
 
+	bool terminate = false;
+	Camera3D camera;
+	OrbitingViewer orbit;
+
+	camera.z = 10.0; // look at point 0,0,10
+
+	camera.y = 5.0;
+	camera.farZ = 400.0;
+
+	//initialize fonts (after FsOpenWindow)
+	ComicSansFont comicsans;
+	comicsans.setColorHSV(300, 1, 1);
+	ImpactFont impact;
+
 	// run user input loop
-	while (theManager.manage()) {
+	while (theManager.manage(camera, orbit)) {
 		FsSleep(25);
 	}
 

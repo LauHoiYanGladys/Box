@@ -13,6 +13,7 @@ public:
 	void setUpCameraProjection(void);
 	void setUpCameraTransformation(void);
 
+
 	void getForwardVector(double& vx, double& vy, double& vz);
 	// returns unit vector components of camera orientation
 };
