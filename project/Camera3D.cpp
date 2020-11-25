@@ -17,7 +17,7 @@ void Camera3D::initialize(void)
 
 	// FOV: 30 deg
 	fov = PI / 6.0;
-
+	
 	// set depth range
 	nearZ = 0.1;
 	farZ = 400.0;

@@ -35,7 +35,7 @@ Manager::Manager()
 
 	currBox = nullptr;
 
-	viewScale = 1.0;
+	viewScale = 12.0;
 	panChange = 10;
 	zoomFactor = 1.2;
 
@@ -145,8 +145,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	getModelCoords(modelX, modelY, locX, locY);
 
-	cout << "mouse X model position: " << modelX << endl;
-	cout << "mouse Y model position: " << modelY << endl;
+	//cout << "mouse X model position: " << modelX << endl;
+	//cout << "mouse Y model position: " << modelY << endl;
 
 	if (mouseEvent == FSMOUSEEVENT_LBUTTONDOWN || mouseEvent == FSMOUSEEVENT_MBUTTONDOWN || key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) {
 		prevLocX = locX; prevLocY = locY;  // capture location of first button press
@@ -188,14 +188,16 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		orbit.p += Camera3D::PI / 180.0;
 	if (FsGetKeyState(FSKEY_DOWN))
 		orbit.p -= Camera3D::PI / 180.0;
-	if (FsGetKeyState(FSKEY_F) && orbit.dist > 0.5){
+	if (FsGetKeyState(FSKEY_F) && orbit.dist > 2){
 		orbit.dist /= 1.05;
 		viewScale *= 1.05;
+		
 	}
 
 	if (FsGetKeyState(FSKEY_B) && orbit.dist < camera.farZ * .8) {
 		orbit.dist *= 1.05;
 		viewScale /= 1.05;
+		
 	}
 		
 	if (FsGetKeyState(FSKEY_J))
@@ -209,7 +211,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	if (key == FSKEY_Z)
 		snapFaceOn(orbit, camera);
-
+	if (key == FSKEY_E)
+		toggleEditMode();
 	orbit.setUpCamera(camera);
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -249,7 +252,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	case FSKEY_Q: addBox(camera, orbit);
 		break;
-	case FSKEY_W: deleteBox();
+	case FSKEY_W: editBox();
 		break;
 
 	}
@@ -458,13 +461,27 @@ void Manager::editBox()
 	int key = FsInkey();
 	int mouseEvent, leftButton, middleButton, rightButton;
 	int locX, locY;
-	double modelX, modelY;
+	double modelX = 0, modelY = 0;
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-
 	getModelCoords(modelX, modelY, locX, locY);
-	Box toEdit = *findBox(modelX, modelY, 2);
+	Box* toEdit = findBox(modelX, modelY, 10);
+	while (toEdit == nullptr)
+	{
 
-	editBox(toEdit);
+		FsPollDevice();
+
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+		getModelCoords(modelX, modelY, locX, locY);
+		if (leftButton)
+		{
+			toEdit = findBox(modelX, modelY, 10);
+			if (toEdit == nullptr)
+				cout << "nullptr" << endl;
+		}
+		
+		
+	}
+	editBox(*toEdit);
 
 }
 
@@ -480,9 +497,8 @@ void Manager::editBox(Box& toEdit)
 	toEdit.getParams(tX, tY, tH, tW, tHue); //returns parameters from Box toEdit
 
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-
 	//Set Width
-	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
+	do
 	{
 		if (key == FSKEY_WHEELUP)
 			toEdit.setWidth(min(toEdit.getWidth() + 1, double(100))); //add max
@@ -492,7 +508,13 @@ void Manager::editBox(Box& toEdit)
 		FsPollDevice();
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-	}
+
+		draw();
+		drawAxes();
+		FsSwapBuffers();
+
+
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
 	if (isValidLoc(toEdit))
 	{
@@ -500,7 +522,7 @@ void Manager::editBox(Box& toEdit)
 		FsPollDevice();
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-		while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+		while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 		{
 
 			if (key == FSKEY_WHEELUP)
@@ -511,6 +533,11 @@ void Manager::editBox(Box& toEdit)
 			FsPollDevice();
 			key = FsInkey();
 			mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+			draw();
+			drawAxes();
+			FsSwapBuffers();
+
 		}
 
 		FsPollDevice();
@@ -520,7 +547,7 @@ void Manager::editBox(Box& toEdit)
 		if (isValidLoc(toEdit))
 		{
 			//Set Hue
-			while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+			while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 			{
 
 				if (key == FSKEY_WHEELUP)
@@ -531,6 +558,11 @@ void Manager::editBox(Box& toEdit)
 				FsPollDevice();
 				key = FsInkey();
 				mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+				draw();
+				drawAxes();
+				FsSwapBuffers();
+
 			}
 
 		}
@@ -916,7 +948,7 @@ void Manager::draw()
 		//getScreenCoords(it->second.getComX(), it->second.getComY(), screenX, screenY);
 		//screenW = it->second.getWidth() * viewScale;
 		//screenH = it->second.getHeight() * viewScale;
-		DrawingUtilNG::drawRectangle3D(it->second.getComX(), it->second.getComY(), it->second.getWidth(), it->second.getHeight(), it->second.getHue(), true);
+		DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), it->second.getWidth(), it->second.getHeight(), it->second.getHue(), true);
 	}
 	
 
