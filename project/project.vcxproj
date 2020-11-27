@@ -147,6 +147,7 @@
     <ClInclude Include="GraphicFont.h" />
     <ClInclude Include="Manager.h" />
     <ClInclude Include="OrbitingViewer.h" />
+    <ClInclude Include="Rocket.h" />
     <ClInclude Include="StringPlus.h" />
     <ClInclude Include="ysglfontdata.h" />
     <ClInclude Include="yspng.h" />
@@ -160,6 +161,7 @@
     <ClCompile Include="Manager.cpp" />
     <ClCompile Include="OrbitingViewer.cpp" />
     <ClCompile Include="project.cpp" />
+    <ClCompile Include="Rocket.cpp" />
     <ClCompile Include="StringPlus.cpp" />
     <ClCompile Include="ysglfontdata.c" />
     <ClCompile Include="yspng.cpp" />

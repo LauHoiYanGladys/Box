@@ -10,7 +10,7 @@ void Box::fall(double deltaT)
 {
 	// Box class has Y-coordinate of COM (comY), velocity, fallDuration. There is also a constant gravity for all
 
-	if (comY > 0.) {
+	if (yDistanceFromBelow > 0.) {
 		/*setComY(comY - (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT));*/
 		comY -= (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT);
 		setBounds();
@@ -31,9 +31,37 @@ void Box::fall(double deltaT)
 //	//cout << "Drawing Box (" << comX << "," << comY << ") " << endl;
 //}
 
-void Box::print(ofstream& outFile)
+void Box::print(std::ofstream& outFile)
 {
 	outFile << "\t" << comX << "\t" << comY << "\t" 
-		<<  xDim << "\t" << yDim << "\t" << hue << endl;
+		<<  xDim << "\t" << yDim << "\t" << hue << std::endl;
 
 }
+
+void EngineBox::addPropellant()
+{
+	if (propellantMass < maxPropellantMass) {
+		if (maxPropellantMass - propellantMass < 2)
+			propellantMass = maxPropellantMass;
+		else {
+			propellantMass += 2;
+		}
+	}
+	else
+		std::cout << "Fuel tank is full, no fuel can be added" << std::endl;
+}
+
+void EngineBox::removePropellant()
+{
+	if (propellantMass > 0) {
+		if (propellantMass < 2)
+			propellantMass = 0;
+		else {
+			propellantMass -= 2;
+		}
+	}
+	else
+		std::cout << "Fuel tank is empty, no fuel can be removed" << std::endl;
+}
+
+

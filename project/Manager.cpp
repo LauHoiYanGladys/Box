@@ -129,16 +129,18 @@ void Manager::showMenu()
 bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 {
 	bool boxIsMoving = false;
-	FsPollDevice();
+	
 	int key, mouseEvent, leftButton, middleButton, rightButton;
 	int locX, locY, prevLocX, prevLocY;
 	double modelX, modelY;
+
 
 	int wid, hei;
 	FsGetWindowSize(wid, hei);
 
 	double vx, vy, vz;
 
+	FsPollDevice();
 	key = FsInkey();
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
 		rightButton, locX, locY);
@@ -148,34 +150,77 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//cout << "mouse X model position: " << modelX << endl;
 	//cout << "mouse Y model position: " << modelY << endl;
 
+	//ComicSansFont comicsans;
+	//comicsans.setColorHSV(300, 1, 1);
+	//ImpactFont impact;
+
 	if (mouseEvent == FSMOUSEEVENT_LBUTTONDOWN || mouseEvent == FSMOUSEEVENT_MBUTTONDOWN || key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) {
 		prevLocX = locX; prevLocY = locY;  // capture location of first button press
 	}
 
+	// moving boxes
+	if (leftButton && editModeIsOn && currBox != nullptr && FsGetKeyState(FSKEY_M)) {
+		boxIsMoving = true;  // this will prevent searching for a new node
 
-	if (middleButton || (FsGetKeyState(FSKEY_CTRL) && leftButton)) { // pan in x and y axes
-		prevLocX = locX; prevLocY = locY;
-		xOrigin += (locX - prevLocX);
-		yOrigin += (locY - prevLocY);
-		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
+		// if current box is a selected box and more than 1 selected box, 
+		// move all selected boxes by the same amount
+		if (selectedBoxes.find(currBox->getLabel()) != selectedBoxes.end() && selectedBoxes.size() > 1) {
+			getModelCoords(modelX, modelY, locX, locY);
+			// record change in position
+			double oldX = currBox->getComX();
+			double oldY = currBox->getComY();
+			// set current box position
+			currBox->setComX(modelX);
+			currBox->setComY(modelY);
+			// set position of other selected boxes
+			for (auto& aSelectedBox : selectedBoxes) {
+				if (aSelectedBox.first.compare(currBox->getLabel()) != 0) {
+					double aSelectedBoxOldX = aSelectedBox.second->getComX();
+					double aSelectedBoxOldY = aSelectedBox.second->getComY();
+					aSelectedBox.second->setComX(aSelectedBoxOldX + modelX - oldX);
+					aSelectedBox.second->setComY(aSelectedBoxOldY + modelY - oldY);
+				}
+			}
+		}
+		// else just move the current Box 
+		else {
+			getModelCoords(modelX, modelY, locX, locY);
+			// set current box position
+			currBox->setComX(modelX);
+			currBox->setComY(modelY);
+		}
+
+
+		// change it to update by the amount that the mouse moved instead
+		//getModelCoords(modelX, modelY, locX, locY); not needed i think?
+		/*currBox->setComX(currBox->getComX() + locX - prevLocX);
+		currBox->setComY(currBox->getComY() + locY - prevLocY);*/
+		//prevLocX = locX; prevLocY = locY; // reset previous values to continue move
 	}
 
-	else if (((key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) && FsGetKeyState(FSKEY_CTRL)) // these also are triggered by touchpad pinch and two finger scroll
-		|| (FsGetKeyState(FSKEY_SHIFT) && leftButton)) { // zoom in and out
-		double oldScale = viewScale;
-		if (key == FSKEY_WHEELUP || locY < prevLocY)
-			viewScale *= (zoomFactor - 1) * 0.4 + 1.0; // less jumpty than zooming with +/- keys
-		else if (key == FSKEY_WHEELDOWN || locY > prevLocY)
-			viewScale /= (zoomFactor - 1) * 0.4 + 1.0;
+	//if (middleButton || (FsGetKeyState(FSKEY_CTRL) && leftButton)) { // pan in x and y axes
+	//	prevLocX = locX; prevLocY = locY;
+	//	xOrigin += (locX - prevLocX);
+	//	yOrigin += (locY - prevLocY);
+	//	prevLocX = locX; prevLocY = locY; // reset previous values to continue move
+	//}
+
+	//else if (((key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) && FsGetKeyState(FSKEY_CTRL)) // these also are triggered by touchpad pinch and two finger scroll
+	//	|| (FsGetKeyState(FSKEY_SHIFT) && leftButton)) { // zoom in and out
+	//	double oldScale = viewScale;
+	//	if (key == FSKEY_WHEELUP || locY < prevLocY)
+	//		viewScale *= (zoomFactor - 1) * 0.4 + 1.0; // less jumpty than zooming with +/- keys
+	//	else if (key == FSKEY_WHEELDOWN || locY > prevLocY)
+	//		viewScale /= (zoomFactor - 1) * 0.4 + 1.0;
 
 
-		xOrigin = (int)round((locX * (oldScale - viewScale)
-			+ xOrigin * viewScale) / oldScale);
-		yOrigin = (int)round((locY * (oldScale - viewScale)
-			+ yOrigin * viewScale) / oldScale);
+	//	xOrigin = (int)round((locX * (oldScale - viewScale)
+	//		+ xOrigin * viewScale) / oldScale);
+	//	yOrigin = (int)round((locY * (oldScale - viewScale)
+	//		+ yOrigin * viewScale) / oldScale);
 
-		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
-	}
+	//	prevLocX = locX; prevLocY = locY; // reset previous values to continue move
+	//}
 	if (key == FSKEY_U)
 		restoreState();
 	
@@ -211,8 +256,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	if (key == FSKEY_Z)
 		snapFaceOn(orbit, camera);
-	if (key == FSKEY_E)
-		toggleEditMode();
+
 	orbit.setUpCamera(camera);
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -232,7 +276,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	switch (key) {
 
-	case FSKEY_E: editModeIsOn = !editModeIsOn;
+	case FSKEY_E: toggleEditMode();
 		break;
 	case FSKEY_SPACE: gravityIsOn = !gravityIsOn;
 		break;
@@ -265,44 +309,57 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		// draw a border around the window
 		drawEditModeIndicator();
 
-		// figure out if there's a box to highlight
+		
+		// figure out if there's a current box
+		getModelCoords(modelX, modelY, locX, locY);
 		if (!boxIsMoving) {
-			double modelX, modelY;
-			getModelCoords(modelX, modelY, locX, locY);
-			currBox = findBox(modelX, modelY, 10 / viewScale);
+			currBox = findBox(modelX, modelY, 3);
 		}
+		
+		// for debugging selecting current box
+		//if (currBox != nullptr)
+		//	cout << "Current box is box " << currBox->getLabel() << endl;
+		//else
+		//	cout << "no current box" << endl;
 
-		if (currBox != nullptr) {
-			highlightBox(*currBox);
-		}
+
+
 	}
 
 	// Gladys
-	// selecting boxes
-	if (editModeIsOn && mouseEvent == FSMOUSEEVENT_LBUTTONDOWN && currBox != nullptr) {
-		// add current box to selected boxes if not already there
-		if (!selectedBoxes.empty()) {
-			for (auto& aSelectedBox : selectedBoxes)
-				if (currBox->getLabel().compare(aSelectedBox->getLabel()) == 0)
-					selectedBoxes.push_back(currBox);
+	// selecting or deselecting boxes
+	if (editModeIsOn && mouseEvent == FSMOUSEEVENT_LBUTTONDOWN && currBox != nullptr && !FsGetKeyState(FSKEY_M)) {
+		
+		// if not already selected, add to selected
+		if (selectedBoxes.find(currBox->getLabel()) == selectedBoxes.end()) {
+			selectedBoxes.insert({ currBox->getLabel(), currBox });
 		}
-		else
-			selectedBoxes.push_back(currBox);
+		// otherwise, remove it from selected boxes (i.e. deselecting)
+		else {
+			selectedBoxes.erase(currBox->getLabel());
+		}
+
+		// old vector method
+		//if (!selectedBoxes.empty()) {
+		//	for (auto& aSelectedBox : selectedBoxes) {
+		//		// add current box to selected boxes if not already there
+		//		if (currBox->getLabel().compare(aSelectedBox->getLabel()) == 0) {
+		//			selectedBoxes.push_back(currBox);
+		//		}
+		//		// otherwise, remove it from selected boxes (i.e. deselecting)
+		//		else
+
+		//	}
+		//}
+		//else
+		//	selectedBoxes.push_back(currBox);
+
+		// needed whether it is selecting or deselecting
+		currBox->toggleIsHighlighted();
 	}
 
-	// moving boxes
-	if (leftButton && editModeIsOn && currBox != nullptr) {
-		boxIsMoving = true;  // this will prevent searching for a new node
-
-		double modelX, modelY;
-		// change it to update by the amount that the mouse moved instead
-		//getModelCoords(modelX, modelY, locX, locY); not needed i think?
-		currBox->setComX(currBox->getComX() + locX - prevLocX);
-		currBox->setComY(currBox->getComY() + locY - prevLocY);
-		prevLocX = locX; prevLocY = locY; // reset previous values to continue move
-	}
-
-	// Set up 2D drawing
+	
+	//// Set up 2D drawing
 	//glMatrixMode(GL_PROJECTION);
 	//glLoadIdentity();
 	//glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
@@ -310,16 +367,16 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//glMatrixMode(GL_MODELVIEW);
 	//glLoadIdentity();
 
-	/*comicsans.drawText("I'm Orbiting!", 10, 60, .25);
+	//comicsans.drawText("I'm Orbiting!", 10, 60, .25);
 
-	std::string data;
-	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
-	comicsans.setColorHSV(300, 1, .5);
-	comicsans.drawText(data, 10, 80, .15);
+	//std::string data;
+	//data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
+	//comicsans.setColorHSV(300, 1, .5);
+	//comicsans.drawText(data, 10, 80, .15);
 
-	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
-		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-	comicsans.drawText(data, 10, 95, .15);*/
+	//data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+	//	+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+	//comicsans.drawText(data, 10, 95, .15);
 
 	//// draw boxes
 	//snapFaceOn(orbit, camera);
@@ -609,19 +666,19 @@ void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 		else if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setWidth(max(currAdd->second.getWidth() - 4, double(.05))); //add min
 
-		FsPollDevice();
-		key = FsInkey();
-		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-
 		draw();
 		drawAxes();
 		FsSwapBuffers();
 
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
 	}
 
-	FsPollDevice();
-	key = FsInkey();
-	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+	//FsPollDevice();
+	//key = FsInkey();
+	//mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	//Set Height
 	do
@@ -635,18 +692,20 @@ void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 		else if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setHeight(max(currAdd->second.getHeight() - 4, double(1))); //add min
 
+		draw();
+		drawAxes();
+		FsSwapBuffers();
+
 		FsPollDevice();
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
-		draw();
-		drawAxes();
-		FsSwapBuffers();
+
 	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
-	FsPollDevice();
-	key = FsInkey();
-	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+	//FsPollDevice();
+	//key = FsInkey();
+	//mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	//Set Color (Hue)
 	do
@@ -659,21 +718,23 @@ void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 		if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setHue(max((currAdd->second.getHue() - 3), double(0)));
 
-		FsPollDevice();
-		key = FsInkey();
-		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-
 		draw();
 		drawAxes();
 		FsSwapBuffers();
 
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+
+
 	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
-	do
-	{
-		getModelCoords(modelX, modelY, locX, locY);
-		currAdd->second.setXY(modelX, modelY);
-	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+	//do
+	//{
+	//	getModelCoords(modelX, modelY, locX, locY);
+	//	currAdd->second.setXY(modelX, modelY);
+	//} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
 	if (!isValidLoc(currAdd->second))
 		deleteBox(currAdd->second);
@@ -734,6 +795,7 @@ bool Manager::isValidLoc(Box& box1)
 		{
 			cout << "comparing Box against " << box2.first << endl;
 			if (isIntersecting(box1, box2.second, both))
+			//if (isIntersecting(box1, box2.second, x))
 				return false;
 		}
 	}
@@ -794,19 +856,32 @@ void Manager::assignYDistanceFromBelow(Box& aBox)
 // Gladys
 Box* Manager::findBox(double x, double y, double distance)
 {
-	// iterate through theBoxes
-	for (auto& currBox : theBoxes) {
-		// compute distance between the mouse and the Box
-		double mouseXDistance = currBox.second.getComX();
-		double mouseYDistance = currBox.second.getComY();
-
-		// if the Box's x- or y- distance from a node is less than given distance, return that Box
-		if (abs(mouseXDistance) < distance && abs(mouseYDistance) < distance) {
-			return &(currBox.second);
-		}
+	double minX = x - distance, maxX = x + distance;
+	double minY = y - distance, maxY = y + distance;
+	double currX, currY;
+	for (unordered_map<string, Box>::iterator it = theBoxes.begin();
+		it != theBoxes.end(); it++) {
+		currX = it->second.getComX();
+		currY = it->second.getComY();
+		if (minX < currX && currX < maxX && minY < currY && currY < maxY)
+			return &(it->second);
 	}
 
 	return nullptr;
+	
+	//// iterate through theBoxes
+	//for (auto& currBox : theBoxes) {
+	//	// compute distance between the mouse and the Box
+	//	double mouseXDistance = currBox.second.getComX();
+	//	double mouseYDistance = currBox.second.getComY();
+
+	//	// if the Box's x- or y- distance from a node is less than given distance, return that Box
+	//	if (abs(mouseXDistance) < distance && abs(mouseYDistance) < distance) {
+	//		return &(currBox.second);
+	//	}
+	//}
+
+	//return nullptr;
 }
 // Gladys
 Box* Manager::findBox(const string& givenLabel)
@@ -916,14 +991,14 @@ void Manager::drawEditModeIndicator()
 
 }
 // Gladys
-void Manager::highlightBox(Box& aBox)
-{
-	glLineWidth(3);
-	glColor3ub(0, 255, 0);
-	//aBox.draw();
-	glLineWidth(1);
-
-}
+//void Manager::highlightBox(Box& aBox)
+//{
+//	glLineWidth(3);
+//	glColor3ub(0, 255, 0);
+//	//aBox.draw();
+//	glLineWidth(1);
+//
+//}
 
 void Manager::draw()
 {
@@ -948,7 +1023,8 @@ void Manager::draw()
 		//getScreenCoords(it->second.getComX(), it->second.getComY(), screenX, screenY);
 		//screenW = it->second.getWidth() * viewScale;
 		//screenH = it->second.getHeight() * viewScale;
-		DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), it->second.getWidth(), it->second.getHeight(), it->second.getHue(), true);
+		DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 
+			it->second.getWidth(), it->second.getHeight(), it->second.getHue(), it->second.getIsHighlighted());
 	}
 	
 

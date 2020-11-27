@@ -36,7 +36,8 @@ private:
 
 	Box* currBox;
 
-	vector<Box*> selectedBoxes;
+	/*vector<Box*> selectedBoxes;*/
+	std::unordered_map<std::string, Box*> selectedBoxes;
 
 	int boxCounter;
 
@@ -52,6 +53,10 @@ public:
 
 	void toggleEditMode() {
 		editModeIsOn = !editModeIsOn;
+		if (editModeIsOn)
+			cout << "Edit mode is on" << endl;
+		else
+			cout << "Edit mode is off" << endl;
 	}
 
 	/*void toggleSimulatorIsOn() {

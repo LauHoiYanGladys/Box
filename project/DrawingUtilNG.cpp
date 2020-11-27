@@ -127,7 +127,7 @@ void DrawingUtilNG::drawRectangle(double x, double y, int sizeX, int sizeY, bool
 	glEnd();
 }
 
-void DrawingUtilNG::drawRectangle3D(double x, double y, int sizeX, int sizeY, double hue, bool filled)
+void DrawingUtilNG::drawRectangle3D(double x, double y, int sizeX, int sizeY, double hue, bool isHighlighted)
 {
 	
 	double red, green, blue;
@@ -201,17 +201,23 @@ void DrawingUtilNG::drawRectangle3D(double x, double y, int sizeX, int sizeY, do
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	
-	if (filled)
-		glBegin(GL_POLYGON);
-	else
+	//if (filled)
+	//	glBegin(GL_POLYGON);
+	//else
+	//	glBegin(GL_LINE_LOOP);
+
+	if (isHighlighted) {
+		glLineWidth(3);
 		glBegin(GL_LINE_LOOP);
+		glColor3f(0.0f, 0.0f, 0.0f);
+		glVertex3d(x, y, 0);
+		glVertex3d(x + sizeX, y, 0);
+		glVertex3d(x + sizeX, y + sizeY, 0);
+		glVertex3d(x, y + sizeY, 0);
+		glEnd();
+		glLineWidth(1);
+	}
 
-	glVertex2i(x, y);
-	glVertex2i(x + sizeX, y);
-	glVertex2i(x + sizeX, y + sizeY);
-	glVertex2i(x, y + sizeY);
-
-	glEnd();
 }
 
 void DrawingUtilNG::drawStar(double centerX, double centerY,
