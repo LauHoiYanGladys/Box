@@ -150,9 +150,9 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//cout << "mouse X model position: " << modelX << endl;
 	//cout << "mouse Y model position: " << modelY << endl;
 
-	//ComicSansFont comicsans;
-	//comicsans.setColorHSV(300, 1, 1);
-	//ImpactFont impact;
+	ComicSansFont comicsans;
+	comicsans.setColorHSV(300, 1, 1);
+	ImpactFont impact;
 
 	if (mouseEvent == FSMOUSEEVENT_LBUTTONDOWN || mouseEvent == FSMOUSEEVENT_MBUTTONDOWN || key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) {
 		prevLocX = locX; prevLocY = locY;  // capture location of first button press
@@ -359,24 +359,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	}
 
 	
-	//// Set up 2D drawing
-	//glMatrixMode(GL_PROJECTION);
-	//glLoadIdentity();
-	//glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+	
 
-	//glMatrixMode(GL_MODELVIEW);
-	//glLoadIdentity();
-
-	//comicsans.drawText("I'm Orbiting!", 10, 60, .25);
-
-	//std::string data;
-	//data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
-	//comicsans.setColorHSV(300, 1, .5);
-	//comicsans.drawText(data, 10, 80, .15);
-
-	//data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
-	//	+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-	//comicsans.drawText(data, 10, 95, .15);
 
 	//// draw boxes
 	//snapFaceOn(orbit, camera);
@@ -394,6 +378,27 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 			currBox.second.fall(0.1);
 		}
 	}
+
+	// Set up 2D drawing
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
+
+	comicsans.drawText("I'm Orbiting!", 10, 60, .25);
+
+	std::string data;
+	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
+	comicsans.setColorHSV(300, 1, .5);
+	comicsans.drawText(data, 10, 80, .15);
+
+	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+	comicsans.drawText(data, 10, 95, .15);
 
 	FsSwapBuffers();
 

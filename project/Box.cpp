@@ -41,7 +41,7 @@ void Box::print(std::ofstream& outFile)
 void EngineBox::addPropellant()
 {
 	if (propellantMass < maxPropellantMass) {
-		if (maxPropellantMass - propellantMass < 2)
+		if ((maxPropellantMass - propellantMass) < 2)
 			propellantMass = maxPropellantMass;
 		else {
 			propellantMass += 2;

@@ -12,9 +12,11 @@ private:
 	std::vector<PayloadBox*> thePayloadBoxes;
 	double totalPropellantMass, totalPayloadMass, 
 		totalStructuralMass, initialMass, propellantMassFraction;
-	double baselineVelocity, velocity;
+	double baselineVelocity, velocity, comX, comY, comMassXSum, comMassYSum;
 	double timeElapsedSinceLaunch;
 	bool flightEnded;
+	// reset all total mass to zero 
+	void resetTotalMass();
 public:
 	Rocket(std::string& theLabel, PayloadBox& aPayloadBox, EngineBox& anEngineBox) {
 		label = theLabel;
@@ -35,7 +37,18 @@ public:
 	// updates the instantaneous velocity
 	void updateVelocity();
 
+	// compute COM from scratch (weighted average of payloadBox and EngineBox Com)
+	void computeCom();
+
+	// update COM (used when a given box is changed or added/removed
+	void updateCom(EngineBox& anEngineBox);
+	void updateCom(PayloadBox& aPayloadBox);
+
 	// updates position of rocket
 	void fly();
 
+	// get current COM
+	double getComX() { return comX; };
+	double getComY() { return comY; };
+	double getVelocity() { return velocity; };
 };
