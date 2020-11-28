@@ -223,7 +223,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//}
 	if (key == FSKEY_U)
 		restoreState();
-	
+
 	if (FsGetKeyState(FSKEY_LEFT)) {
 		orbit.h += Camera3D::PI / 180.0;
 	}		
@@ -294,6 +294,10 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//case FSKEY_MINUS: viewScale /= zoomFactor;
 	//	break;
 
+	case FSKEY_S: save();
+		break;
+	case FSKEY_L: load();
+		break;
 	case FSKEY_Q: addBox(camera, orbit);
 		break;
 	case FSKEY_W: editBox();
@@ -807,6 +811,7 @@ void Manager::save()
 {
 	string outFileName;
 	ofstream outFile;
+	cout << "a" << endl;
 	outFileName = getFileFromScreen(allModelfiles,
 		"Enter file name to save the model.");
 
