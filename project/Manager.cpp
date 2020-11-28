@@ -447,8 +447,10 @@ void Manager::load()
 	string inFileName;
 	ifstream inFile;
 
-	inFileName = getFileFromScreen(allModelfiles,
-		"Enter file name of model to load.");
+	inFileName = getFileFromConsole();
+
+	/*inFileName = getFileFromScreen(allModelfiles,
+		"Enter file name of model to load.");*/
 
 	// if user forgets extension, just add it in
 	if (inFileName.find(".model") == string::npos)
@@ -811,9 +813,9 @@ void Manager::save()
 {
 	string outFileName;
 	ofstream outFile;
-	cout << "a" << endl;
-	outFileName = getFileFromScreen(allModelfiles,
-		"Enter file name to save the model.");
+	outFileName = getFileFromConsole();
+	/*outFileName = getFileFromScreen(allModelfiles,
+		"Enter file name to save the model.");*/
 
 	// if user forgets extension, just add it in
 	if (outFileName.find(".model") == string::npos)
@@ -903,7 +905,6 @@ Box* Manager::findBox(const string& givenLabel)
 // Gladys
 string Manager::getFileFromScreen(vector<string>& availableFiles, const string& prompt)
 {
-
 	int adjustLetter;
 	int key;
 	string fileName = "";
@@ -921,6 +922,7 @@ string Manager::getFileFromScreen(vector<string>& availableFiles, const string& 
 		YsGlDrawFontBitmap12x16("Press ENTER when done, ESC to cancel.");
 		glColor3ub(255, 0, 255);
 		DrawingUtilNG::drawRectangle(140, 235, 450, 50, false);
+		cout << 'b';
 
 		// show list of available files (need C++17 to work, set in project props)
 		glRasterPos2d(440, 330);
@@ -957,10 +959,26 @@ string Manager::getFileFromScreen(vector<string>& availableFiles, const string& 
 		return "";
 
 }
+
+string Manager::getFileFromConsole()
+{
+	glColor3f(0, 0, 0);
+	glRasterPos2d(150, 200);
+	YsGlDrawFontBitmap20x28("Input required on console . . .");
+	FsSwapBuffers();
+
+	string longInput;
+	cout << endl << "            Name of file to load (.model) >> ";
+	getline(cin, longInput);
+
+	showMenu(); // So that it is "fresh"
+
+	return StringPlus::trim(longInput);
+}
+
 // Gladys
 void Manager::getAvailableFiles(vector<string>& availableFiles)
 {
-	availableFiles.clear();
 	// need C++17 to work (set in project properties)
 	//     Configuration Properties -> General -> C++ Language Standard
 	for (const auto& entry : std::filesystem::directory_iterator(".")) {
@@ -968,7 +986,7 @@ void Manager::getAvailableFiles(vector<string>& availableFiles)
 		wstring ws(entry.path().c_str());
 		string currFileName(ws.begin(), ws.end());
 
-		if (currFileName.find(".slide") != string::npos)
+		if (currFileName.find(".model") != string::npos)
 			availableFiles.push_back(currFileName.substr(2));
 	}
 }

@@ -108,6 +108,8 @@ public:
 	// allows user to input file name on screen, with a list of available files
 	// requires using C++17 compiler (set in project properties)
 
+	string getFileFromConsole();
+
 	void getAvailableFiles(std::vector<std::string>& availableFiles);
 
 	void readFile(std::ifstream& inFile);
