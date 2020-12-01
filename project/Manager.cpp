@@ -150,9 +150,9 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//cout << "mouse X model position: " << modelX << endl;
 	//cout << "mouse Y model position: " << modelY << endl;
 
-	ComicSansFont comicsans;
-	comicsans.setColorHSV(300, 1, 1);
-	ImpactFont impact;
+	//ComicSansFont comicsans;
+	//comicsans.setColorHSV(300, 1, 1);
+	//ImpactFont impact;
 
 	if (mouseEvent == FSMOUSEEVENT_LBUTTONDOWN || mouseEvent == FSMOUSEEVENT_MBUTTONDOWN || key == FSKEY_WHEELUP || key == FSKEY_WHEELDOWN) {
 		prevLocX = locX; prevLocY = locY;  // capture location of first button press
@@ -383,8 +383,23 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		}
 	}
 
+	FsPollDevice();
+	key = FsInkey();
+	mouseEvent = FsGetMouseEvent(leftButton, middleButton,
+		rightButton, locX, locY);
+
+	getModelCoords(modelX, modelY, locX, locY);
+
+	glBegin(GL_QUADS);
+	
+	glVertex3d(modelX-1, modelY-1, 0);
+	glVertex3d(modelX-1, modelY+1, 0);
+	glVertex3d(modelX+1, modelY+1, 0);
+	glVertex3d(modelX+1, modelY-1, 0);
+
+	glEnd();
 	// Set up 2D drawing
-	glMatrixMode(GL_PROJECTION);
+	/*glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
 
@@ -402,7 +417,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
 		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-	comicsans.drawText(data, 10, 95, .15);
+	comicsans.drawText(data, 10, 95, .15);*/
 
 	FsSwapBuffers();
 
@@ -550,6 +565,7 @@ void Manager::editBox()
 		
 	}
 	editBox(*toEdit);
+	assignYDistanceFromBelow(*toEdit);
 
 }
 
@@ -1051,8 +1067,9 @@ void Manager::draw()
 		//getScreenCoords(it->second.getComX(), it->second.getComY(), screenX, screenY);
 		//screenW = it->second.getWidth() * viewScale;
 		//screenH = it->second.getHeight() * viewScale;
-		DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 
-			it->second.getWidth(), it->second.getHeight(), it->second.getHue(), it->second.getIsHighlighted());
+		//DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 
+		//	it->second.getWidth(), it->second.getHeight(), it->second.getHue(), it->second.getIsHighlighted());
+		DrawingUtilNG::drawCube(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 0, it->second.getRightUpperX(), it->second.getRightUpperY(), -10, it->second.getHue(), it->second.getIsHighlighted());
 	}
 	
 

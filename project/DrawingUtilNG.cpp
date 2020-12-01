@@ -484,13 +484,13 @@ void DrawingUtilNG::coverAndFade(int x1, int y1, int x2, int y2, int totalT, int
 
 }
 
-void DrawingUtilNG::drawCube(vertexF v1, vertexF v2, bool sixColors)
-{
-	drawCube(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, sixColors);
-}
+//void DrawingUtilNG::drawCube(vertexF v1, vertexF v2, bool sixColors)
+//{
+//	drawCube(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, sixColors);
+//}
 
 void DrawingUtilNG::drawCube(double x1, double y1, double z1,
-	double x2, double y2, double z2, double hue/*, bool sixColors, GraphicFont* aFont*/)
+	double x2, double y2, double z2, double hue, bool isHighlighted/*, bool sixColors, GraphicFont* aFont*/)
 {
 	double red, green, blue;
 	glEnable(GL_POLYGON_OFFSET_FILL);
@@ -498,7 +498,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 
 	glBegin(GL_QUADS);
 
-	DrawingUtilNG::hsv2rgb(hue, 1, 1, red, green, blue);
+	DrawingUtilNG::hsv2rgb(hue, 1, .6, red, green, blue);
 	glColor3f(red, green, blue);
 
 	//if (sixColors)
@@ -509,7 +509,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	glVertex3d(x1, y2, z1);
 
 
-	DrawingUtilNG::hsv2rgb(hue+10, 1, 1, red, green, blue);
+	DrawingUtilNG::hsv2rgb(hue, 1, 1, red, green, blue);
 	glColor3f(red, green, blue);
 	//if (sixColors)
 	//	glColor3ub(0, 255, 0);  // green
@@ -518,7 +518,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	glVertex3d(x2, y2, z2);
 	glVertex3d(x1, y2, z2);
 
-	DrawingUtilNG::hsv2rgb(hue + 20, 1, 1, red, green, blue);
+	DrawingUtilNG::hsv2rgb(hue, 1, .8, red, green, blue);
 	glColor3f(red, green, blue);
 	//if (sixColors)
 	//	glColor3ub(0, 255, 255); // cyan
@@ -527,7 +527,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	glVertex3d(x2, y1, z2);
 	glVertex3d(x1, y1, z2);
 
-	DrawingUtilNG::hsv2rgb(hue + 30, 1, 1, red, green, blue);
+	DrawingUtilNG::hsv2rgb(hue, 1, .8, red, green, blue);
 	glColor3f(red, green, blue);
 	//if (sixColors)
 	//	glColor3ub(255, 0, 0);  // red
@@ -536,7 +536,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	glVertex3d(x2, y2, z2);
 	glVertex3d(x1, y2, z2);
 
-	DrawingUtilNG::hsv2rgb(hue + 40, 1, 1, red, green, blue);
+	DrawingUtilNG::hsv2rgb(hue, 1, .8, red, green, blue);
 	glColor3f(red, green, blue);
 	//if (sixColors)
 	//	glColor3ub(255, 0, 255); // magenta
@@ -545,7 +545,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	glVertex3d(x1, y2, z2);
 	glVertex3d(x1, y1, z2);
 
-	DrawingUtilNG::hsv2rgb(hue + 50, 1, 1, red, green, blue);
+	DrawingUtilNG::hsv2rgb(hue, 1, 1, red, green, blue);
 	glColor3f(red, green, blue);
 	//if (sixColors)
 	//	glColor3ub(255, 255, 0);  // yellow
@@ -554,7 +554,21 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	glVertex3d(x2, y2, z2);
 	glVertex3d(x2, y1, z2);
 
+	
 	glEnd();
+
+	if (isHighlighted) {
+		glLineWidth(3);
+		glBegin(GL_LINE_LOOP);
+		glColor3f(0.0f, 0.0f, 0.0f);
+		glVertex3d(x1, y1, 0);
+		glVertex3d(x2, y1, 0);
+		glVertex3d(x2, y2, 0);
+		glVertex3d(x1, y2, 0);
+		glEnd();
+		glLineWidth(1);
+	}
+
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 
