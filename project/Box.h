@@ -142,12 +142,12 @@ private:
 public:
 	EngineBox(std::string& theLabel, double& theComX, double& theComY,
 		double& theXDim, double& theYDim, double& theHue, 
-		double& theThrust, double& thePropellantMassFlow, double& theBurnTime):
+		double& theThrust, double& thePropellantMassFlow):
 		Box(theLabel,theComX, theComY, theXDim, theYDim, theHue) {
 		propellantMass = xDim * yDim; // initially set to be equal to box area, can change with adding/removing propellant
 		structuralMass = 0.1 * xDim * yDim; // a function of dimensions
 		effectiveExhaustVelocity = thrust / propellantMassFlow;
-		burnTime = theBurnTime;
+		burnTime = propellantMass/ propellantMassFlow;
 	};
 	// change the amount of fuel
 	void addPropellant();
@@ -159,6 +159,11 @@ public:
 	double getStructuralMass() { return structuralMass; };
 	double getEffectiveExhaustVelocity() { return effectiveExhaustVelocity; };
 	double getBurnTime() { return burnTime; };
+
+	// increment ComY
+	void incrementComY(double incrementY) {
+		comY += incrementY;
+	}
 };
 
 class PayloadBox : public Box {
@@ -171,4 +176,8 @@ public:
 		payloadMass = xDim * yDim;
 	}
 	double getPayloadMass() { return payloadMass; };
+	// increment ComY
+	void incrementComY(double incrementY) {
+		comY += incrementY;
+	}
 };

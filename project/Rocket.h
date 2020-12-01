@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <memory>
 #include <math.h>
+#include <chrono>
 #include "Box.h"
 
 class Rocket {
@@ -13,10 +14,12 @@ private:
 	double totalPropellantMass, totalPayloadMass, 
 		totalStructuralMass, initialMass, propellantMassFraction;
 	double baselineVelocity, velocity, comX, comY, comMassXSum, comMassYSum;
-	double timeElapsedSinceLaunch;
+	double timeElapsedInStage;
+	std::chrono::steady_clock::time_point begin;
 	bool flightEnded;
 	// reset all total mass to zero 
 	void resetTotalMass();
+	int stageNumber;
 public:
 	Rocket(std::string& theLabel, PayloadBox& aPayloadBox, EngineBox& anEngineBox) {
 		label = theLabel;
@@ -28,8 +31,10 @@ public:
 		initialMass = totalPayloadMass + totalStructuralMass + totalPropellantMass;
 		
 		propellantMassFraction = totalPropellantMass/ initialMass;
-		timeElapsedSinceLaunch = 0.;
+		timeElapsedInStage = 0.;
 		flightEnded = false;
+		stageNumber = 1; // same as the number of engineBox present
+		baselineVelocity = 0;
 	}
 	void addEngineBox(EngineBox& anEngineBox);
 	void addPayloadBox(PayloadBox& aPayloadBox);
@@ -45,10 +50,14 @@ public:
 	void updateCom(PayloadBox& aPayloadBox);
 
 	// updates position of rocket
-	void fly();
+	void fly(double deltaT);
 
 	// get current COM
 	double getComX() { return comX; };
 	double getComY() { return comY; };
 	double getVelocity() { return velocity; };
+
+	// keeps track of time since stage starts
+
+	void startStage();
 };

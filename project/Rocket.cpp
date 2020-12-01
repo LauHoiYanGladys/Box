@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include "Rocket.h"
 
 
@@ -13,14 +14,14 @@ void Rocket::resetTotalMass()
 
 void Rocket::addEngineBox(EngineBox& anEngineBox)
 {
-	EngineBox* EngineBoxPtr = &anEngineBox;
-	theEngineBoxes.push_back(EngineBoxPtr);
+	/*EngineBox* EngineBoxPtr = &anEngineBox;*/
+	theEngineBoxes.push_back(&anEngineBox);
 }
 
 void Rocket::addPayloadBox(PayloadBox& aPayloadBox)
 {
-	PayloadBox* PayloadBoxPtr = &aPayloadBox;
-	thePayloadBoxes.push_back(PayloadBoxPtr);
+	/*PayloadBox* PayloadBoxPtr = &aPayloadBox;*/
+	thePayloadBoxes.push_back(&aPayloadBox);
 }
 
 void Rocket::updateVelocity()
@@ -29,7 +30,9 @@ void Rocket::updateVelocity()
 		EngineBox* currEngineBox = theEngineBoxes.back();
 		double currEffectiveExhaustVelocity = currEngineBox->getEffectiveExhaustVelocity();
 		double currBurnTime = currEngineBox->getBurnTime();
-		velocity = -currEffectiveExhaustVelocity * log(1 - propellantMassFraction * timeElapsedSinceLaunch / currBurnTime) + baselineVelocity;
+		/*double timeElapsedInStage = std::chrono::duration_cast<std::chrono::nanoseconds>
+			(std::chrono::high_resolution_clock::now() - begin).count() / 1e9;*/
+		velocity = -currEffectiveExhaustVelocity * log(1 - propellantMassFraction * timeElapsedInStage / currBurnTime) + baselineVelocity;
 	}
 	else
 		std::cout << "No active engine running, velocity cannot be changed" << std::endl;
@@ -80,7 +83,31 @@ void Rocket::updateCom(PayloadBox& aPayloadBox)
 	comY = comMassYSum / (totalPayloadMass + totalStructuralMass + totalPropellantMass);
 }
 
-void Rocket::fly()
+void Rocket::fly(double deltaT)
 {
-	// update Com
+	
+	// update velocity
+	updateVelocity();
+	// update Com of rocket
+	comY += velocity * deltaT;
+
+	// update Com of all boxes in the rocket by the same amount
+	for (auto& currEngineBox : theEngineBoxes) {
+		currEngineBox->incrementComY(velocity * deltaT);
+	}
+	// update Com of all boxes in the rocket by the same amount
+	for (auto& currPayloadBox : thePayloadBoxes) {
+		currPayloadBox->incrementComY(velocity * deltaT);
+	}
+	
+	timeElapsedInStage += deltaT;
+}
+
+void Rocket::startStage()
+{
+	theEngineBoxes.pop_back();
+	baselineVelocity = velocity;
+	/*begin = std::chrono::high_resolution_clock::now();*/
+	timeElapsedInStage = 0;
+
 }
