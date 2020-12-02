@@ -7,11 +7,13 @@
 class Box {
 protected:
 	std::string label;
-	double comX, comY, xDim, yDim, hue, leftUpperX, leftUpperY, 
-			rightUpperX, rightUpperY, leftLowerX, leftLowerY, 
-			rightLowerX, rightLowerY, velocity, fallDuration,
-			maxX, maxY, minX, minY, yDistanceFromBelow;
+	double comX, comY, xDim, yDim, hue, leftUpperX, leftUpperY,
+		rightUpperX, rightUpperY, leftLowerX, leftLowerY,
+		rightLowerX, rightLowerY, velocity, fallDuration,
+		maxX, maxY, minX, minY, yDistanceFromBelow;
+	/*double thrust, propellantMassFlow;*/ // these are only actually used in EngineBox (child class)
 	bool isHighlighted;
+
 	//bool onGround, onBox;
 public:
 	Box(std::string& theLabel, double& theComX, double& theComY, 
@@ -132,6 +134,19 @@ public:
 		xDim = w;
 		hue = theHue;
 	}
+
+	//// these four are just for the engine box to inherit, not supposed to be used here
+	//virtual void setThrust(double theThrust) {
+	//	thrust = 0;
+	//	std::cout << "thrust is not supposed to be set in ordinary boxes" << std::endl;
+	//};
+	//virtual void setPropellantMassFlow(double thePropellantMassFlow) { 
+	//	propellantMassFlow = 0; 
+	//	std::cout << "propellantMassFlow is not supposed to be set in ordinary boxes" << std::endl;
+	//};
+	//virtual double getThrust() { return 0; };
+	//virtual double getPropellantMassFlow() { return 0; }
+
 };
 
 class EngineBox : public Box {
@@ -148,6 +163,8 @@ public:
 		structuralMass = 0.1 * xDim * yDim; // a function of dimensions
 		effectiveExhaustVelocity = thrust / propellantMassFlow;
 		burnTime = propellantMass/ propellantMassFlow;
+		thrust = theThrust;
+		propellantMassFlow = thePropellantMassFlow;
 	};
 	// change the amount of fuel
 	void addPropellant();
@@ -159,6 +176,14 @@ public:
 	double getStructuralMass() { return structuralMass; };
 	double getEffectiveExhaustVelocity() { return effectiveExhaustVelocity; };
 	double getBurnTime() { return burnTime; };
+
+	// initial settings
+	void setThrust(double theThrust) { thrust = theThrust; std::cout << "setting thrust to " << thrust << std::endl; };
+	void setPropellantMassFlow(double thePropellantMassFlow) { propellantMassFlow = thePropellantMassFlow; };
+
+	double getThrust() { return thrust; };
+	double getPropellantMassFlow() { return propellantMassFlow; }
+
 
 	// increment ComY
 	void incrementComY(double incrementY) {

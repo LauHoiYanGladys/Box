@@ -4,13 +4,19 @@
 #include <memory>
 #include <math.h>
 #include <chrono>
+#include <string>
 #include "Box.h"
+#include "Manager.h"
+
+class Manager;
 
 class Rocket {
 private:
 	std::string label;
-	std::vector<EngineBox*> theEngineBoxes;
-	std::vector<PayloadBox*> thePayloadBoxes;
+	std::unordered_map<std::string, EngineBox*> theEngineBoxes;
+	std::unordered_map<std::string, PayloadBox*> thePayloadBoxes;
+	/*std::vector<EngineBox*> theEngineBoxes;*/
+	/*std::vector<PayloadBox*> thePayloadBoxes;*/
 	double totalPropellantMass, totalPayloadMass, 
 		totalStructuralMass, initialMass, propellantMassFraction;
 	double baselineVelocity, velocity, comX, comY, comMassXSum, comMassYSum;
@@ -20,22 +26,38 @@ private:
 	// reset all total mass to zero 
 	void resetTotalMass();
 	int stageNumber;
+	int engineBoxCounter, payloadBoxCounter;
 public:
-	Rocket(std::string& theLabel, PayloadBox& aPayloadBox, EngineBox& anEngineBox) {
+	Rocket(std::string& theLabel) {
 		label = theLabel;
-		addEngineBox(anEngineBox);
-		addPayloadBox(aPayloadBox);
-		totalPropellantMass = theEngineBoxes.back()->getPropellantMass();
-		totalPayloadMass = thePayloadBoxes.back()->getPayloadMass();
-		totalStructuralMass = theEngineBoxes.back()->getStructuralMass();
-		initialMass = totalPayloadMass + totalStructuralMass + totalPropellantMass;
-		
-		propellantMassFraction = totalPropellantMass/ initialMass;
+
+		totalPropellantMass = 0;
+		totalPayloadMass = 0;
+		totalStructuralMass = 0;
+		initialMass = 0;
+		/*propellantMassFraction = totalPropellantMass/ initialMass;*/
 		timeElapsedInStage = 0.;
 		flightEnded = false;
-		stageNumber = 1; // same as the number of engineBox present
+		stageNumber = 1; // increments during flight if more than 1 engine box
 		baselineVelocity = 0;
+		engineBoxCounter = 0;
+		payloadBoxCounter = 0;
+		//totalPropellantMass = theEngineBoxes.back()->getPropellantMass();
+		//totalPayloadMass = thePayloadBoxes.back()->getPayloadMass();
+		//totalStructuralMass = theEngineBoxes.back()->getStructuralMass();
+		//initialMass = totalPayloadMass + totalStructuralMass + totalPropellantMass;
 	}
+	~Rocket() {
+		if (!theEngineBoxes.empty()) {
+			for (auto& currEngineBox : theEngineBoxes)
+				delete currEngineBox.second;
+		}
+		if (!thePayloadBoxes.empty()) {
+			for (auto& currPayloadBox : thePayloadBoxes)
+				delete currPayloadBox.second;
+		}
+	}
+
 	void addEngineBox(EngineBox& anEngineBox);
 	void addPayloadBox(PayloadBox& aPayloadBox);
 
@@ -57,7 +79,34 @@ public:
 	double getComY() { return comY; };
 	double getVelocity() { return velocity; };
 
-	// keeps track of time since stage starts
-
+	// do things required to start a new stage
 	void startStage();
+
+	// these functions are called when new boxes are added
+	void updateTotalPropellantMass(EngineBox& anEngineBox);
+	void updateTotalStructuralMass(EngineBox& anEngineBox);
+	void updateTotalPayloadMass(PayloadBox& aPayloadBox);
+	void updateInitialMass(EngineBox& anEngineBox);
+	void updateInitialMass(PayloadBox& aPayloadBox);
+	void incrementEngineBoxCounter() { engineBoxCounter++; };
+	void incrementPayloadBoxCounter() { payloadBoxCounter++; };
+
+	// functions to access private members
+	int getEngineBoxCounter() { return engineBoxCounter++; };
+	int getPayloadBoxCounter() { return payloadBoxCounter++; };
+
+	// access the component boxes by label
+	EngineBox* getEngineBox(std::string& label);
+	PayloadBox* getPayloadBox(std::string& label);
+
+	// gives the rocket name
+	std::string getLabel() { return label; };
+
+	// create an engine box, add to rocket and returns a pointer to it
+	EngineBox* makeEngineBox(Manager& theManager);
+	/*EngineBox* makeEngineBox();*/
+
+	// access the collection of boxes
+	std::unordered_map<std::string, EngineBox*>* getTheEngineBoxes() { return &theEngineBoxes; };
+	std::unordered_map<std::string, PayloadBox*>* getThePayloadBoxes() { return &thePayloadBoxes; };
 };
