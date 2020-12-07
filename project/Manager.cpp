@@ -51,7 +51,7 @@ Manager::Manager()
 	theRocketBoxType = engine; // defaults to setting engine box first
 	currRocket = nullptr;
 
-	comicsans.init();
+	
 	
 	
 
@@ -407,10 +407,10 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	glBegin(GL_QUADS);
 
-	glVertex3d(modelX - 1, modelY - 1, 0);
-	glVertex3d(modelX - 1, modelY + 1, 0);
-	glVertex3d(modelX + 1, modelY + 1, 0);
-	glVertex3d(modelX + 1, modelY - 1, 0);
+	glVertex3d(modelX - 12 / viewScale, modelY - 12 / viewScale, 0);
+	glVertex3d(modelX - 12 / viewScale, modelY + 12 / viewScale, 0);
+	glVertex3d(modelX + 12 / viewScale, modelY + 12 / viewScale, 0);
+	glVertex3d(modelX + 12 / viewScale, modelY - 12 / viewScale, 0);
 
 	glEnd();
 
@@ -477,6 +477,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
 {
+	this->camera = &camera;
+	this->orbit = &orbit;
 	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
 
 	png[0].Decode("grass.png");
@@ -545,6 +547,22 @@ void Manager::drawText2d(std::string data, GraphicFont& font, double xLoc, doubl
 	glDisable(GL_DEPTH_TEST);
 
 	font.drawText(data, xLoc, yLoc, scale);
+
+	orbit->setUpCamera(*camera);
+
+	//glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	glViewport(0, 0, wid, hei);
+
+	// Set up 3D drawing
+	camera->setUpCameraProjection();
+	camera->setUpCameraTransformation();
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1, 1);
+
+	glColor3ub(93, 290, 112);
 
 }
 
@@ -754,7 +772,10 @@ void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 
 	// remember the current state before making changes
 	boxStates.push_back(theBoxes);
-	cout << "Adding Box" << endl;
+	comicsans.setColorHSV(300, 1, .5);
+	
+	bool deletedFlag = false;
+
 	FsPollDevice();
 	int key = FsInkey();
 	int mouseEvent, leftButton, middleButton, rightButton;
@@ -795,10 +816,21 @@ else if (theMode == rocketBuildMode && theRocketBoxType == payload) {
 else
 	currAdd = nullptr;*/
 	//Set Width
-	cout << "Setting width" << endl;
+	
+	
 	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 	{
-		//cout << "Setting width = " << toAdd.getWidth() << endl;
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(300, 1, .5);
+		std::string data = "Adding Box: selecting width";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to set width. LMB to confirm.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Width = " + std::to_string(currAdd->second.getWidth());
+		drawText2d(data, comicsans, 10, 95, .15);
+
 		//cout << "X = " << toAdd.getComX() << " Y = " << toAdd.getComY() << endl;
 		getModelCoords(modelX, modelY, locX, locY);
 
@@ -809,8 +841,7 @@ else
 		else if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setWidth(max(currAdd->second.getWidth() - 1, double(.05))); //add min
 
-		draw();
-		drawAxes();
+
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -824,6 +855,16 @@ else
 	cout << "setting height" << endl;
 	do
 	{
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(300, 1, .5);
+		std::string data = "Adding Box: selecting height";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to set height. LMB to confirm";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Height = " + std::to_string(currAdd->second.getHeight());
+		drawText2d(data, comicsans, 10, 95, .15);
 
 		/*cout << "Setting height = " << currAdd->second.getHeight() << endl;*/
 		getModelCoords(modelX, modelY, locX, locY);
@@ -833,8 +874,7 @@ else
 		else if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setHeight(max(currAdd->second.getHeight() - 1, double(1))); //add min
 
-		draw();
-		drawAxes();
+
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -850,6 +890,16 @@ else
 	cout << "setting color" << endl;
 	do
 	{
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(currAdd->second.getHue(), 1, .5);
+		std::string data = "Adding Box: selecting color";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to adjust hue. LMB to confirm.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Hue = " + std::to_string(currAdd->second.getHue());
+		drawText2d(data, comicsans, 10, 95, .15);
 
 		getModelCoords(modelX, modelY, locX, locY);
 		currAdd->second.setXY(modelX, modelY);
@@ -858,8 +908,6 @@ else
 		if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setHue(max((currAdd->second.getHue() - 3), double(0)));
 
-		draw();
-		drawAxes();
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -869,21 +917,46 @@ else
 
 	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
-	//do
-	//{
-	//	getModelCoords(modelX, modelY, locX, locY);
-	//	currAdd->second.setXY(modelX, modelY);
-	//} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+	do
+	{
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(currAdd->second.getHue(), 1, .5);
+		std::string data = "Adding Box: selecting location";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Move mouse to adjust location. LMB to confirm. RMB to delete.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "X = " + std::to_string(currAdd->second.getComX()) + "  Y= " + std::to_string(currAdd->second.getComY());
+		drawText2d(data, comicsans, 10, 95, .15);
+		getModelCoords(modelX, modelY, locX, locY);
+		currAdd->second.setXY(modelX, modelY);
+
+		if (mouseEvent == FSMOUSEEVENT_RBUTTONDOWN)
+		{
+			deleteBox(currAdd->second);
+			deletedFlag = true;
+			break;
+		}
+		
+		FsSwapBuffers();
+
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
 
+	if (!deletedFlag) {
+		if (!isValidLoc(currAdd->second)) {
+			deleteBox(currAdd->second);
+			deletedFlag = true;
+		}
+		else {
+			assignYDistanceFromBelow(currAdd->second);
 
-	if (!isValidLoc(currAdd->second))
-		deleteBox(currAdd->second);
-	else {
-		assignYDistanceFromBelow(currAdd->second);
-
+		}
 	}
-
 
 }
 
@@ -1213,6 +1286,7 @@ void Manager::drawEditModeIndicator()
 
 void Manager::draw()
 {
+	
 	double red, green, blue;
 	/*
 	for (int i = 0; i < theBoxes.size(); i++) {

@@ -25,7 +25,8 @@ private:
 	/*bool editModeIsOn;*/
 	//bool simulatorIsOn;
 	bool gravityIsOn;
-	
+	Camera3D* camera;
+	OrbitingViewer* orbit;
 	//textures
 	YsRawPngDecoder png[2];
 	GLuint texId[2];
