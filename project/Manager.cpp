@@ -51,6 +51,7 @@ Manager::Manager()
 	theRocketBoxType = engine; // defaults to setting engine box first
 	currRocket = nullptr;
 
+	comicsans.init();
 	
 	
 
@@ -412,26 +413,22 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	glVertex3d(modelX + 1, modelY - 1, 0);
 
 	glEnd();
+
+	
 	// Set up 2D drawing (commented out because of lagging)
-	/*glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	glDisable(GL_DEPTH_TEST);
-
-	comicsans.drawText("I'm Orbiting!", 10, 60, .25);
+	
+	impact.setColorHSV(300, 1, 1);
+	drawText2d("I'm Orbiting!",impact, 10, 60, .4);
 
 	std::string data;
 	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
 	comicsans.setColorHSV(300, 1, .5);
-	comicsans.drawText(data, 10, 80, .15);
+	//comicsans.drawText(data, 10, 80, .15);
+	drawText2d(data, comicsans, 10, 80, .15);
 
 	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
 		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-	comicsans.drawText(data, 10, 95, .15);*/
+	drawText2d(data, comicsans, 10, 95, .15);
 
 	/*ComicSansFont comicsans;
 	comicsans.setColorHSV(300, 1, 1);
@@ -480,6 +477,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
 {
+	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
+
 	png[0].Decode("grass.png");
 
 	glGenTextures(1, &texId[0]);
@@ -498,6 +497,11 @@ void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
 		GL_RGBA,
 		GL_UNSIGNED_BYTE,
 		png[0].rgba);
+
+
+	
+	comicsans.init();
+	impact.init();
 
 	while (manage(camera, orbit)) {
 		FsSleep(5);
@@ -526,6 +530,26 @@ void Manager::drawAxes() {
 	glVertex3i(0, 0, length);
 	glEnd();
 }
+
+void Manager::drawText2d(std::string data, GraphicFont& font, double xLoc, double yLoc, double scale)
+{
+	int wid, hei;
+	FsGetWindowSize(wid, hei);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
+
+	font.drawText(data, xLoc, yLoc, scale);
+
+}
+
+
+
 
 // Gladys
 void Manager::load()

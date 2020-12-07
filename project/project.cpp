@@ -16,7 +16,7 @@ int main(void) {
 	theManager.showMenu();
 
 	// set up graphics window
-	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
+	//FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
 
 	bool terminate = false;
 	Camera3D camera;
@@ -29,9 +29,7 @@ int main(void) {
 	orbit.p -= 5*Camera3D::PI / 180.0;
 	orbit.h += 2 * Camera3D::PI / 180.0;
 	//initialize fonts (after FsOpenWindow)
-	ComicSansFont comicsans;
-	comicsans.setColorHSV(300, 1, 1);
-	ImpactFont impact;
+	
 
 	// run user input loop
 

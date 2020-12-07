@@ -65,8 +65,9 @@ private:
 	rocketBoxType theRocketBoxType;
 	
 	string currRocketLabel;
-	/*comicsansfont comicsans;
-	impactfont impact;*/
+	ComicSansFont comicsans;
+	ImpactFont impact;
+
 public:
 	//int key;
 	//int mouseEvent, leftButton, middleButton, rightButton;
@@ -117,6 +118,8 @@ public:
 	void manageSetup(Camera3D& camera, OrbitingViewer& orbit);
 
 	void drawAxes();
+
+	void drawText2d(std::string data, GraphicFont& font, double xLoc, double yLoc, double scale);
 
 	void addBox(Camera3D& camera, OrbitingViewer& orbit);
 
