@@ -2,24 +2,29 @@
 #include <stack> 
 #include <unordered_map>
 #include <vector>
+#include "Rocket.h"
 #include "Box.h"
+#include "ysglfontdata.h"
+#include "GraphicFont.h"
 #include "StringPlus.h"
 #include "Camera3D.h"
 #include "OrbitingViewer.h"
 
+
 #define WIN_WIDTH 1200
 #define WIN_HEIGHT 800
 
-enum overlappingDimension {x, both};
+class Rocket;
 
-using namespace std;
+//using namespace std;
 
 class Manager {
 
 private:
-	bool editModeIsOn;
+	/*bool editModeIsOn;*/
 	//bool simulatorIsOn;
 	bool gravityIsOn;
+
 	std::unordered_map<std::string, Box> theBoxes;
 	
 	// for determining the label of the next added box 
@@ -35,9 +40,10 @@ private:
 	double minX, maxX, minY, maxY, groundY;
 
 	Box* currBox;
-
+	Rocket* currRocket;
 	/*vector<Box*> selectedBoxes;*/
 	std::unordered_map<std::string, Box*> selectedBoxes;
+	std::unordered_map<std::string, Rocket*> theRockets;
 
 	int boxCounter;
 
@@ -45,19 +51,51 @@ private:
 
 	vector<std::unordered_map<std::string, Box>> boxStates;
 
+	enum overlappingDimension { x, both };
+
+	enum mode { viewMode, editMode, rocketBuildMode, rocketFlyMode };
+	mode theMode;
+
+	enum rocketBoxType { engine, payload };
+	rocketBoxType theRocketBoxType;
+	
+	string currRocketLabel;
+	/*comicsansfont comicsans;
+	impactfont impact;*/
 public:
+	//int key;
+	//int mouseEvent, leftButton, middleButton, rightButton;
+	//int locX, locY, prevLocX, prevLocY;
+	//double modelX, modelY;
+
 	Manager();
 
 	bool isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension);
 	// returns true if two boxes are intersecting
 
-	void toggleEditMode() {
+	void toggleMode() {
+		theMode = static_cast<mode>((theMode + 1) % (rocketFlyMode + 1));
+		if (theMode == viewMode)
+			cout << "in View Mode" << endl;
+		else if(theMode == editMode)
+			cout << "in Edit Mode" << endl;
+		else if (theMode == rocketBuildMode)
+			cout << "in Rocket Build Mode" << endl;
+		else if (theMode == rocketFlyMode)
+			cout << "in Rocket Fly Mode" << endl;
+	}
+
+	void toggleRocketBoxType() {
+		theRocketBoxType = static_cast<rocketBoxType>((theRocketBoxType + 1) % (payload + 1));
+	}
+
+	/*void toggleEditMode() {
 		editModeIsOn = !editModeIsOn;
 		if (editModeIsOn)
 			cout << "Edit mode is on" << endl;
 		else
 			cout << "Edit mode is off" << endl;
-	}
+	}*/
 
 	/*void toggleSimulatorIsOn() {
 		simulatorIsOn = !simulatorIsOn;
@@ -110,6 +148,8 @@ public:
 
 	string getFileFromConsole();
 
+	string getRocketLabelFromConsole();
+
 	void getAvailableFiles(std::vector<std::string>& availableFiles);
 
 	void readFile(std::ifstream& inFile);
@@ -118,7 +158,7 @@ public:
 
 	void drawEditModeIndicator();
 
-	void highlightBox(Box& aBox);
+	/*void highlightBox(Box& aBox);*/
 	void draw();
 	void getModelCoords(double& modelX, double& modelY, double screenX, double screenY);
 	void getScreenCoords(double modelX, double modelY, double& screenX, double& screenY);
@@ -126,5 +166,12 @@ public:
 	void updateModelCom(Box& newBox);
 	void storeState(std::unordered_map<std::string, Box> theBoxes);
 	void restoreState();
+	bool buildRocket();
+	void printAvailableRockets();
+	bool editRocketComponents(Rocket& theRocket);
+	// make an engine box for the current rocket
+	bool makeEngineBox();
+	bool makePayloadBox();
 };
+
 
