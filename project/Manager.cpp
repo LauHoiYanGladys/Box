@@ -54,6 +54,8 @@ Manager::Manager()
 	
 	
 
+	
+
 }
 // Gladys
 bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension)
@@ -137,6 +139,7 @@ void Manager::showMenu()
 
 bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 {
+
 	bool boxIsMoving = false;
 
 	int key, mouseEvent, leftButton, middleButton, rightButton;
@@ -380,7 +383,6 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//// draw boxes
 	//snapFaceOn(orbit, camera);
 	draw();
-
 	// draw axes
 	drawAxes();
 
@@ -474,6 +476,32 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//	rightButton, locX, locY);
 
 	return (key != FSKEY_ESC);
+}
+
+void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
+{
+	png[0].Decode("grass.png");
+
+	glGenTextures(1, &texId[0]);
+	glBindTexture(GL_TEXTURE_2D, texId[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D
+	(GL_TEXTURE_2D,
+		0,    // Level of detail
+		GL_RGBA,       // the "A" in RGBA will include the transparency
+		png[0].wid,    // the hippos width and height
+		png[0].hei,
+		0,    // Border width, but not supported and needs to be 0.
+		GL_RGBA,
+		GL_UNSIGNED_BYTE,
+		png[0].rgba);
+
+	while (manage(camera, orbit)) {
+		FsSleep(5);
+	}
 }
 
 void Manager::drawAxes() {
@@ -698,6 +726,8 @@ void Manager::editBox(Box& toEdit)
 
 void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 {
+
+
 	// remember the current state before making changes
 	boxStates.push_back(theBoxes);
 	cout << "Adding Box" << endl;
@@ -751,9 +781,9 @@ else
 
 		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			currAdd->second.setWidth(min(currAdd->second.getWidth() + 4, double(100))); //add max
+			currAdd->second.setWidth(min(currAdd->second.getWidth() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			currAdd->second.setWidth(max(currAdd->second.getWidth() - 4, double(.05))); //add min
+			currAdd->second.setWidth(max(currAdd->second.getWidth() - 1, double(.05))); //add min
 
 		draw();
 		drawAxes();
@@ -775,9 +805,9 @@ else
 		getModelCoords(modelX, modelY, locX, locY);
 		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			currAdd->second.setHeight(min(currAdd->second.getHeight() + 4, double(100))); //add max
+			currAdd->second.setHeight(min(currAdd->second.getHeight() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			currAdd->second.setHeight(max(currAdd->second.getHeight() - 4, double(1))); //add min
+			currAdd->second.setHeight(max(currAdd->second.getHeight() - 1, double(1))); //add min
 
 		draw();
 		drawAxes();
@@ -829,6 +859,48 @@ else
 		assignYDistanceFromBelow(currAdd->second);
 
 	}
+
+
+}
+
+void Manager::drawGround()
+{
+	
+	
+	int max = 500;
+	int min = -max;
+	int steps = 6;
+	double stepsize = (max - min) / steps;
+
+	for (int i = 0; i < steps; i++)
+	{
+		for (int j = 0; j < steps; j++)
+		{
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glColor4d(1.0, 1.0, 1.0, 1.0);
+
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, texId[0]);
+			glPolygonOffset(1, 1);
+			glBegin(GL_QUADS);
+
+			glTexCoord2d(0.0, 0.0);
+			glVertex3d(min+stepsize*j, .01, min+stepsize*i);
+
+			glTexCoord2d(1.0, 0.0);
+			glVertex3d(min+stepsize*(j+1), .01, min+stepsize*i);
+
+			glTexCoord2d(1.0, 1.0);
+			glVertex3d(min+stepsize*(j+1), .01, min+stepsize*(i+1));
+
+			glTexCoord2d(0.0, 1.0);
+			glVertex3d(min+stepsize*j, .01, min+stepsize*(i+1));
+
+			glEnd();
+			glDisable(GL_BLEND);
+		}
+	}
+	
 
 
 }
@@ -1156,7 +1228,7 @@ void Manager::draw()
 
 	}
 
-
+	drawGround();
 }
 
 

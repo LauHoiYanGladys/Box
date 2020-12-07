@@ -9,6 +9,7 @@
 #include "StringPlus.h"
 #include "Camera3D.h"
 #include "OrbitingViewer.h"
+#include "yspng.h"
 
 
 #define WIN_WIDTH 1200
@@ -24,6 +25,10 @@ private:
 	/*bool editModeIsOn;*/
 	//bool simulatorIsOn;
 	bool gravityIsOn;
+	
+	//textures
+	YsRawPngDecoder png[2];
+	GLuint texId[2];
 
 	std::unordered_map<std::string, Box> theBoxes;
 	
@@ -109,9 +114,13 @@ public:
 
 	bool manage(Camera3D& camera, OrbitingViewer& orbit);
 
+	void manageSetup(Camera3D& camera, OrbitingViewer& orbit);
+
 	void drawAxes();
 
 	void addBox(Camera3D& camera, OrbitingViewer& orbit);
+
+	void drawGround();
 
 	void editBox();
 
