@@ -431,7 +431,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
 	comicsans.drawText(data, 10, 95, .15);*/
 
-	ComicSansFont comicsans;
+	/*ComicSansFont comicsans;
 	comicsans.setColorHSV(300, 1, 1);
 	ImpactFont impact;
 
@@ -456,7 +456,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 			+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
 		comicsans.drawText(data, 10, 95, .15);
 
-	}
+	}*/
 	FsSwapBuffers();
 
 	//string inFileName;
