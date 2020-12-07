@@ -419,6 +419,32 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
 	comicsans.drawText(data, 10, 95, .15);*/
 
+	ComicSansFont comicsans;
+	comicsans.setColorHSV(300, 1, 1);
+	ImpactFont impact;
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
+
+	comicsans.drawText("Box's current Position", 10, 30, .25);
+
+	std::string data;
+	if (!theBoxes.empty()) {
+		data = "X=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX()) + " Y=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX());
+		comicsans.setColorHSV(300, 1, .5);
+		comicsans.drawText(data, 10, 80, .15);
+
+		data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+			+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+		comicsans.drawText(data, 10, 95, .15);
+
+	}
 	FsSwapBuffers();
 
 	//string inFileName;
