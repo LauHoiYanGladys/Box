@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <string>
+#include <algorithm>
 #include "Rocket.h"
 #include "Manager.h"
 #include "fssimplewindow.h"

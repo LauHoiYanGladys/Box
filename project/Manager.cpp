@@ -49,7 +49,9 @@ Manager::Manager()
 
 	theMode = editMode;
 
+
 	currRocket = nullptr;
+
 
 }
 // Gladys
@@ -134,6 +136,7 @@ void Manager::showMenu()
 
 bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 {
+
 	bool boxIsMoving = false;
 
 	int key, mouseEvent, leftButton, middleButton, rightButton;
@@ -377,7 +380,6 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//// draw boxes
 	//snapFaceOn(orbit, camera);
 	draw();
-
 	// draw axes
 	drawAxes();
 
@@ -401,14 +403,34 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	glBegin(GL_QUADS);
 
-	glVertex3d(modelX - 1, modelY - 1, 0);
-	glVertex3d(modelX - 1, modelY + 1, 0);
-	glVertex3d(modelX + 1, modelY + 1, 0);
-	glVertex3d(modelX + 1, modelY - 1, 0);
+	glVertex3d(modelX - 12 / viewScale, modelY - 12 / viewScale, 0);
+	glVertex3d(modelX - 12 / viewScale, modelY + 12 / viewScale, 0);
+	glVertex3d(modelX + 12 / viewScale, modelY + 12 / viewScale, 0);
+	glVertex3d(modelX + 12 / viewScale, modelY - 12 / viewScale, 0);
 
 	glEnd();
+
+	
 	// Set up 2D drawing (commented out because of lagging)
-	/*glMatrixMode(GL_PROJECTION);
+	
+	impact.setColorHSV(300, 1, 1);
+	drawText2d("I'm Orbiting!",impact, 10, 60, .4);
+
+	std::string data;
+	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
+	comicsans.setColorHSV(300, 1, .5);
+	//comicsans.drawText(data, 10, 80, .15);
+	drawText2d(data, comicsans, 10, 80, .15);
+
+	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+	drawText2d(data, comicsans, 10, 95, .15);
+
+	/*ComicSansFont comicsans;
+	comicsans.setColorHSV(300, 1, 1);
+	ImpactFont impact;
+
+	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
 
@@ -417,17 +439,19 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	glDisable(GL_DEPTH_TEST);
 
-	comicsans.drawText("I'm Orbiting!", 10, 60, .25);
+	comicsans.drawText("Box's current Position", 10, 30, .25);
 
 	std::string data;
-	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
-	comicsans.setColorHSV(300, 1, .5);
-	comicsans.drawText(data, 10, 80, .15);
+	if (!theBoxes.empty()) {
+		data = "X=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX()) + " Y=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX());
+		comicsans.setColorHSV(300, 1, .5);
+		comicsans.drawText(data, 10, 80, .15);
 
-	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
-		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-	comicsans.drawText(data, 10, 95, .15);*/
+		data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+			+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+		comicsans.drawText(data, 10, 95, .15);
 
+	}*/
 	FsSwapBuffers();
 
 	//string inFileName;
@@ -445,6 +469,41 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//	rightButton, locX, locY);
 
 	return (key != FSKEY_ESC);
+}
+
+void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
+{
+	this->camera = &camera;
+	this->orbit = &orbit;
+	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
+
+	png[0].Decode("grass.png");
+
+	glGenTextures(1, &texId[0]);
+	glBindTexture(GL_TEXTURE_2D, texId[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D
+	(GL_TEXTURE_2D,
+		0,    // Level of detail
+		GL_RGBA,       // the "A" in RGBA will include the transparency
+		png[0].wid,    // the hippos width and height
+		png[0].hei,
+		0,    // Border width, but not supported and needs to be 0.
+		GL_RGBA,
+		GL_UNSIGNED_BYTE,
+		png[0].rgba);
+
+
+	
+	comicsans.init();
+	impact.init();
+
+	while (manage(camera, orbit)) {
+		FsSleep(5);
+	}
 }
 
 void Manager::drawAxes() {
@@ -469,6 +528,42 @@ void Manager::drawAxes() {
 	glVertex3i(0, 0, length);
 	glEnd();
 }
+
+void Manager::drawText2d(std::string data, GraphicFont& font, double xLoc, double yLoc, double scale)
+{
+	int wid, hei;
+	FsGetWindowSize(wid, hei);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
+
+	font.drawText(data, xLoc, yLoc, scale);
+
+	orbit->setUpCamera(*camera);
+
+	//glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	glViewport(0, 0, wid, hei);
+
+	// Set up 3D drawing
+	camera->setUpCameraProjection();
+	camera->setUpCameraTransformation();
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1, 1);
+
+	glColor3ub(93, 290, 112);
+
+}
+
+
+
 
 // Gladys
 void Manager::load()
@@ -669,9 +764,14 @@ void Manager::editBox(Box& toEdit)
 
 void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 {
+
+
 	// remember the current state before making changes
 	boxStates.push_back(theBoxes);
-	cout << "Adding Box" << endl;
+	comicsans.setColorHSV(300, 1, .5);
+	
+	bool deletedFlag = false;
+
 	FsPollDevice();
 	int key = FsInkey();
 	int mouseEvent, leftButton, middleButton, rightButton;
@@ -712,22 +812,32 @@ else if (theMode == rocketBuildMode && theRocketBoxType == payload) {
 else
 	currAdd = nullptr;*/
 	//Set Width
-	cout << "Setting width" << endl;
+	
+	
 	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 	{
-		//cout << "Setting width = " << toAdd.getWidth() << endl;
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(300, 1, .5);
+		std::string data = "Adding Box: selecting width";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to set width. LMB to confirm.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Width = " + std::to_string(currAdd->second.getWidth());
+		drawText2d(data, comicsans, 10, 95, .15);
+
 		//cout << "X = " << toAdd.getComX() << " Y = " << toAdd.getComY() << endl;
 		getModelCoords(modelX, modelY, locX, locY);
 
 
 		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			currAdd->second.setWidth(min(currAdd->second.getWidth() + 4, double(100))); //add max
+			currAdd->second.setWidth(min(currAdd->second.getWidth() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			currAdd->second.setWidth(max(currAdd->second.getWidth() - 4, double(.05))); //add min
+			currAdd->second.setWidth(max(currAdd->second.getWidth() - 1, double(.05))); //add min
 
-		draw();
-		drawAxes();
+
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -741,17 +851,26 @@ else
 	cout << "setting height" << endl;
 	do
 	{
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(300, 1, .5);
+		std::string data = "Adding Box: selecting height";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to set height. LMB to confirm";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Height = " + std::to_string(currAdd->second.getHeight());
+		drawText2d(data, comicsans, 10, 95, .15);
 
 		/*cout << "Setting height = " << currAdd->second.getHeight() << endl;*/
 		getModelCoords(modelX, modelY, locX, locY);
 		currAdd->second.setXY(modelX, modelY);
 		if (key == FSKEY_WHEELUP)
-			currAdd->second.setHeight(min(currAdd->second.getHeight() + 4, double(100))); //add max
+			currAdd->second.setHeight(min(currAdd->second.getHeight() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
-			currAdd->second.setHeight(max(currAdd->second.getHeight() - 4, double(1))); //add min
+			currAdd->second.setHeight(max(currAdd->second.getHeight() - 1, double(1))); //add min
 
-		draw();
-		drawAxes();
+
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -767,6 +886,16 @@ else
 	cout << "setting color" << endl;
 	do
 	{
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(currAdd->second.getHue(), 1, .5);
+		std::string data = "Adding Box: selecting color";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to adjust hue. LMB to confirm.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Hue = " + std::to_string(currAdd->second.getHue());
+		drawText2d(data, comicsans, 10, 95, .15);
 
 		getModelCoords(modelX, modelY, locX, locY);
 		currAdd->second.setXY(modelX, modelY);
@@ -775,8 +904,6 @@ else
 		if (key == FSKEY_WHEELDOWN)
 			currAdd->second.setHue(max((currAdd->second.getHue() - 3), double(0)));
 
-		draw();
-		drawAxes();
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -786,20 +913,87 @@ else
 
 	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
-	//do
-	//{
-	//	getModelCoords(modelX, modelY, locX, locY);
-	//	currAdd->second.setXY(modelX, modelY);
-	//} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+	do
+	{
+		draw();
+		drawAxes();
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(currAdd->second.getHue(), 1, .5);
+		std::string data = "Adding Box: selecting location";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Move mouse to adjust location. LMB to confirm. RMB to delete.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "X = " + std::to_string(currAdd->second.getComX()) + "  Y= " + std::to_string(currAdd->second.getComY());
+		drawText2d(data, comicsans, 10, 95, .15);
+		getModelCoords(modelX, modelY, locX, locY);
+		currAdd->second.setXY(modelX, modelY);
+
+		if (mouseEvent == FSMOUSEEVENT_RBUTTONDOWN)
+		{
+			deleteBox(currAdd->second);
+			deletedFlag = true;
+			break;
+		}
+		
+		FsSwapBuffers();
+
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
 
 
+	if (!deletedFlag) {
+		if (!isValidLoc(currAdd->second)) {
+			deleteBox(currAdd->second);
+			deletedFlag = true;
+		}
+		else {
+			assignYDistanceFromBelow(currAdd->second);
 
-	if (!isValidLoc(currAdd->second))
-		deleteBox(currAdd->second);
-	else {
-		assignYDistanceFromBelow(currAdd->second);
-
+		}
 	}
+
+}
+
+void Manager::drawGround()
+{
+	
+	
+	int max = 500;
+	int min = -max;
+	int steps = 6;
+	double stepsize = (max - min) / steps;
+
+	for (int i = 0; i < steps; i++)
+	{
+		for (int j = 0; j < steps; j++)
+		{
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glColor4d(1.0, 1.0, 1.0, 1.0);
+
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, texId[0]);
+			glPolygonOffset(1, 1);
+			glBegin(GL_QUADS);
+
+			glTexCoord2d(0.0, 0.0);
+			glVertex3d(min+stepsize*j, .01, min+stepsize*i);
+
+			glTexCoord2d(1.0, 0.0);
+			glVertex3d(min+stepsize*(j+1), .01, min+stepsize*i);
+
+			glTexCoord2d(1.0, 1.0);
+			glVertex3d(min+stepsize*(j+1), .01, min+stepsize*(i+1));
+
+			glTexCoord2d(0.0, 1.0);
+			glVertex3d(min+stepsize*j, .01, min+stepsize*(i+1));
+
+			glEnd();
+			glDisable(GL_BLEND);
+		}
+	}
+	
 
 
 }
@@ -1146,6 +1340,7 @@ void Manager::drawEditModeIndicator()
 
 void Manager::draw()
 {
+	
 	double red, green, blue;
 	/*
 	for (int i = 0; i < theBoxes.size(); i++) {
@@ -1204,6 +1399,10 @@ void Manager::draw()
 			}
 		}
 	}
+
+
+	drawGround();
+
 }
 
 
