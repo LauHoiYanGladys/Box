@@ -490,7 +490,7 @@ void DrawingUtilNG::coverAndFade(int x1, int y1, int x2, int y2, int totalT, int
 //}
 
 void DrawingUtilNG::drawCube(double x1, double y1, double z1,
-	double x2, double y2, double z2, double hue, bool isHighlighted/*, bool sixColors, GraphicFont* aFont*/)
+	double x2, double y2, double z2, double hue, bool isHighlighted, bool isCurrentEngine, bool isCurrentPayload/*, bool sixColors, GraphicFont* aFont*/)
 {
 	double red, green, blue;
 	glEnable(GL_POLYGON_OFFSET_FILL);
@@ -557,10 +557,23 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	
 	glEnd();
 
-	if (isHighlighted) {
-		glLineWidth(3);
+	
+
+	if (isCurrentEngine) {
+		glLineWidth(5);
 		glBegin(GL_LINE_LOOP);
-		glColor3f(0.0f, 0.0f, 0.0f);
+		glColor3f(1.0f, 0.0f, 0.0f); // red border
+		glVertex3d(x1, y1, 0);
+		glVertex3d(x2, y1, 0);
+		glVertex3d(x2, y2, 0);
+		glVertex3d(x1, y2, 0);
+		glEnd();
+		glLineWidth(1);
+	}
+	else if (isCurrentPayload) {
+		glLineWidth(5);
+		glBegin(GL_LINE_LOOP);
+		glColor3f(0.0f, 0.0f, 1.0f); // blue border
 		glVertex3d(x1, y1, 0);
 		glVertex3d(x2, y1, 0);
 		glVertex3d(x2, y2, 0);
@@ -569,6 +582,17 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 		glLineWidth(1);
 	}
 
+	if (isHighlighted) {
+		glLineWidth(3);
+		glBegin(GL_LINE_LOOP);
+		glColor3f(0.0f, 0.0f, 0.0f); // black border
+		glVertex3d(x1, y1, 0);
+		glVertex3d(x2, y1, 0);
+		glVertex3d(x2, y2, 0);
+		glVertex3d(x1, y2, 0);
+		glEnd();
+		glLineWidth(1);
+	}
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 

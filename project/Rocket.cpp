@@ -200,6 +200,7 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		else if (key == FSKEY_WHEELDOWN)
 			newEngineBox->setWidth(max(newEngineBox->getWidth() - 4, double(.05))); //add min
 		cout << "setting width to " << newEngineBox->getWidth() << endl;
+		newEngineBox->updateMass(); // update structural and propellant mass according to dimension
 
 		theManager.draw();
 		theManager.drawAxes();
@@ -225,6 +226,8 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		else if (key == FSKEY_WHEELDOWN)
 			newEngineBox->setHeight(max(newEngineBox->getHeight() - 4, double(1))); //add min
 		cout << "setting height to " << newEngineBox->getHeight() << endl;
+		newEngineBox->updateMass(); // update structural and propellant mass according to dimension
+
 		theManager.draw();
 		theManager.drawAxes();
 		FsSwapBuffers();
@@ -318,3 +321,118 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 	cout << "The engine box " << newEngineBox->getLabel() << " has been added to rocket " << this->label << endl;
 	return newEngineBox;
 }
+
+PayloadBox* Rocket::makePayloadBox(Manager& theManager)
+{
+	double tempDim = 10;
+	double tempHue = 0;
+	double tempThrust = 5000;
+	double tempPropellantMassFlow = 10;
+
+	FsPollDevice();
+	int key = FsInkey();
+	int mouseEvent, leftButton, middleButton, rightButton;
+	int locX, locY;
+	double modelX, modelY;
+	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+	theManager.getModelCoords(modelX, modelY, locX, locY);
+
+	// make the box and add to current rocket
+	incrementPayloadBoxCounter();
+	string label = to_string(getPayloadBoxCounter());
+	PayloadBox* newPayloadBox = new PayloadBox(label, modelX, modelY, tempDim, tempDim, tempHue);
+	addPayloadBox(*newPayloadBox);
+
+	cout << "Setting width" << endl;
+	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
+	{
+		//cout << "Setting width = " << toAdd.getWidth() << endl;
+		//cout << "X = " << toAdd.getComX() << " Y = " << toAdd.getComY() << endl;
+		theManager.getModelCoords(modelX, modelY, locX, locY);
+
+
+		newPayloadBox->setXY(modelX, modelY);
+		if (key == FSKEY_WHEELUP)
+			newPayloadBox->setWidth(min(newPayloadBox->getWidth() + 4, double(100))); //add max
+		else if (key == FSKEY_WHEELDOWN)
+			newPayloadBox->setWidth(max(newPayloadBox->getWidth() - 4, double(.05))); //add min
+		cout << "setting width to " << newPayloadBox->getWidth() << endl;
+
+		newPayloadBox->updateMass(); // update structural and propellant mass according to dimension
+
+		theManager.draw();
+		theManager.drawAxes();
+		FsSwapBuffers();
+
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+	}
+
+
+	//Set Height
+	cout << "setting height" << endl;
+	do
+	{
+
+		/*cout << "Setting height = " << currAdd->second.getHeight() << endl;*/
+		theManager.getModelCoords(modelX, modelY, locX, locY);
+		newPayloadBox->setXY(modelX, modelY);
+		if (key == FSKEY_WHEELUP)
+			newPayloadBox->setHeight(min(newPayloadBox->getHeight() + 4, double(100))); //add max
+		else if (key == FSKEY_WHEELDOWN)
+			newPayloadBox->setHeight(max(newPayloadBox->getHeight() - 4, double(1))); //add min
+		cout << "setting height to " << newPayloadBox->getHeight() << endl;
+
+		newPayloadBox->updateMass(); // update structural and propellant mass according to dimension
+
+		theManager.draw();
+		theManager.drawAxes();
+		FsSwapBuffers();
+
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+
+
+
+	//Set Color (Hue)
+	cout << "setting color" << endl;
+	do
+	{
+
+		theManager.getModelCoords(modelX, modelY, locX, locY);
+		newPayloadBox->setXY(modelX, modelY);
+		if (key == FSKEY_WHEELUP)
+			newPayloadBox->setHue(min((newPayloadBox->getHue() + 3), double(360)));
+		if (key == FSKEY_WHEELDOWN)
+			newPayloadBox->setHue(max((newPayloadBox->getHue() - 3), double(0)));
+
+		theManager.draw();
+		theManager.drawAxes();
+		FsSwapBuffers();
+
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+
+	} while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN);
+
+	
+	cout << "The payload box " << newPayloadBox->getLabel() << " has been added to rocket " << this->label << endl;
+	return newPayloadBox;
+}
+
+void Rocket::deleteBox(Box* theBox)
+{
+	delete theBox;
+}
+
+
+

@@ -27,6 +27,8 @@ private:
 	void resetTotalMass();
 	int stageNumber;
 	int engineBoxCounter, payloadBoxCounter;
+	bool isCurrent;
+	enum rocketBoxType { engine, payload };
 public:
 	Rocket(std::string& theLabel) {
 		label = theLabel;
@@ -42,6 +44,7 @@ public:
 		baselineVelocity = 0;
 		engineBoxCounter = 0;
 		payloadBoxCounter = 0;
+		isCurrent = true;
 		//totalPropellantMass = theEngineBoxes.back()->getPropellantMass();
 		//totalPayloadMass = thePayloadBoxes.back()->getPayloadMass();
 		//totalStructuralMass = theEngineBoxes.back()->getStructuralMass();
@@ -104,9 +107,18 @@ public:
 
 	// create an engine box, add to rocket and returns a pointer to it
 	EngineBox* makeEngineBox(Manager& theManager);
+	PayloadBox* makePayloadBox(Manager& theManager);
+	
 	/*EngineBox* makeEngineBox();*/
 
 	// access the collection of boxes
 	std::unordered_map<std::string, EngineBox*>* getTheEngineBoxes() { return &theEngineBoxes; };
 	std::unordered_map<std::string, PayloadBox*>* getThePayloadBoxes() { return &thePayloadBoxes; };
+
+	// delete a box
+	void deleteBox(Box* theBox);
+	//void deleteBox(Manager& theManager, rocketBoxType theRocketBoxType);
+
+	// toggle isCurrent
+	void toggleIsCurrent() { isCurrent = !isCurrent; };
 };

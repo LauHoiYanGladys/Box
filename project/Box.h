@@ -189,6 +189,13 @@ public:
 	void incrementComY(double incrementY) {
 		comY += incrementY;
 	}
+
+	// update propellant and structural mass after dimensions have changed
+	void updateMass() {
+		propellantMass = xDim * yDim; // initially set to be equal to box area, can change with adding/removing propellant
+		structuralMass = 0.1 * xDim * yDim;
+	};
+
 };
 
 class PayloadBox : public Box {
@@ -205,4 +212,8 @@ public:
 	void incrementComY(double incrementY) {
 		comY += incrementY;
 	}
+	// update payload mass after dimensions have changed
+	void updateMass() {
+		payloadMass = xDim * yDim;
+	};
 };

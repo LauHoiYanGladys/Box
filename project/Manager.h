@@ -56,8 +56,8 @@ private:
 	enum mode { viewMode, editMode, rocketBuildMode, rocketFlyMode };
 	mode theMode;
 
-	enum rocketBoxType { engine, payload };
-	rocketBoxType theRocketBoxType;
+	enum boxType {normal, engine, payload};
+
 	
 	string currRocketLabel;
 	/*comicsansfont comicsans;
@@ -85,9 +85,9 @@ public:
 			cout << "in Rocket Fly Mode" << endl;
 	}
 
-	void toggleRocketBoxType() {
+	/*void toggleRocketBoxType() {
 		theRocketBoxType = static_cast<rocketBoxType>((theRocketBoxType + 1) % (payload + 1));
-	}
+	}*/
 
 	/*void toggleEditMode() {
 		editModeIsOn = !editModeIsOn;
@@ -121,6 +121,8 @@ public:
 
 	bool deleteBox(Box& toDelete);
 
+	void deleteBox(boxType theBoxType);
+
 	bool isValidLoc(Box& box1);
 
 	void move(Box aBox);
@@ -131,7 +133,7 @@ public:
 
 	void assignYDistanceFromBelow(Box& aBox);
 
-	Box* findBox(double x, double y, double distance);
+	Box* findBox(double x, double y, double distance, boxType theBoxType);
 	// given model coordinates x,y , function returns the first Box that is
 	// within given distance
 	// returns nullptr if no Box meets the criteria
@@ -172,6 +174,8 @@ public:
 	// make an engine box for the current rocket
 	bool makeEngineBox();
 	bool makePayloadBox();
+
+	void waitForSelection(string toPrint);
 };
 
 

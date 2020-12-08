@@ -48,11 +48,8 @@ Manager::Manager()
 	modelComZ = 0;
 
 	theMode = editMode;
-	theRocketBoxType = engine; // defaults to setting engine box first
-	currRocket = nullptr;
 
-	
-	
+	currRocket = nullptr;
 
 }
 // Gladys
@@ -325,7 +322,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		// figure out if there's a current box
 		getModelCoords(modelX, modelY, locX, locY);
 		if (!boxIsMoving) {
-			currBox = findBox(modelX, modelY, 3);
+			currBox = findBox(modelX, modelY, 3, normal);
 		}
 
 		// for debugging selecting current box
@@ -559,7 +556,7 @@ void Manager::editBox()
 	double modelX = 0, modelY = 0;
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 	getModelCoords(modelX, modelY, locX, locY);
-	Box* toEdit = findBox(modelX, modelY, 10);
+	Box* toEdit = findBox(modelX, modelY, 10, normal);
 	while (toEdit == nullptr)
 	{
 
@@ -569,7 +566,7 @@ void Manager::editBox()
 		getModelCoords(modelX, modelY, locX, locY);
 		if (leftButton)
 		{
-			toEdit = findBox(modelX, modelY, 10);
+			toEdit = findBox(modelX, modelY, 10,normal);
 			if (toEdit == nullptr)
 				cout << "nullptr" << endl;
 		}
@@ -808,7 +805,38 @@ else
 }
 
 
-void Manager::deleteBox()
+//void Manager::deleteBox()
+//{
+//	FsPollDevice();
+//	int key = FsInkey();
+//	int mouseEvent, leftButton, middleButton, rightButton;
+//	int locX, locY;
+//	double modelX, modelY;
+//	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+//
+//	getModelCoords(modelX, modelY, locX, locY);
+//	Box* toDelete = findBox(modelX, modelY, 2,normal);
+//
+//	bool res = deleteBox(*toDelete);
+//
+//	if (res)
+//		cout << "deleted" << endl;
+//	else
+//		cout << "delete failed" << endl;
+//
+//
+//}
+//
+bool Manager::deleteBox(Box& toDelete)
+{
+	int val = theBoxes.erase(toDelete.getLabel());
+	if (val == 0)
+		return false;
+	else
+		return true;
+}
+
+void Manager::deleteBox(boxType theBoxType)
 {
 	FsPollDevice();
 	int key = FsInkey();
@@ -818,25 +846,30 @@ void Manager::deleteBox()
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	getModelCoords(modelX, modelY, locX, locY);
-	Box* toDelete = findBox(modelX, modelY, 2);
+	
+	Box* toDelete = findBox(modelX, modelY, 3, theBoxType);
 
-	bool res = deleteBox(*toDelete);
-
-	if (res)
-		cout << "deleted" << endl;
-	else
-		cout << "delete failed" << endl;
-
-
-}
-
-bool Manager::deleteBox(Box& toDelete)
-{
-	int val = theBoxes.erase(toDelete.getLabel());
-	if (val == 0)
-		return false;
-	else
-		return true;
+	if (toDelete == nullptr) {
+		cout << "no box found to delete" << endl;
+		return;
+	}
+	
+	string theLabel = toDelete->getLabel();
+	if (theBoxType == engine) {
+		currRocket->getTheEngineBoxes()->erase(toDelete->getLabel());
+		currRocket->deleteBox(toDelete);
+		cout << "Engine Box " << theLabel << " of Rocket " << currRocket->getLabel() << "has been deleted" << endl;
+	}
+	else if (theBoxType == payload) {
+		currRocket->getThePayloadBoxes()->erase(toDelete->getLabel());
+		currRocket->deleteBox(toDelete);
+		cout << "Payload Box " << theLabel << " of Rocket " << currRocket->getLabel() << "has been deleted" << endl;
+	}
+	else if (theBoxType == normal) {
+		theBoxes.erase(toDelete->getLabel());
+		cout << "Normal Box " << theLabel << "has been deleted" << endl;
+	}
+	cout << "Deletion failed. No box was deleted." << endl;
 }
 
 void Manager::move(Box aBox)
@@ -916,17 +949,36 @@ void Manager::assignYDistanceFromBelow(Box& aBox)
 }
 
 // Gladys
-Box* Manager::findBox(double x, double y, double distance)
+Box* Manager::findBox(double x, double y, double distance, boxType theBoxType)
 {
 	double minX = x - distance, maxX = x + distance;
 	double minY = y - distance, maxY = y + distance;
 	double currX, currY;
-	for (unordered_map<string, Box>::iterator it = theBoxes.begin();
-		it != theBoxes.end(); it++) {
-		currX = it->second.getComX();
-		currY = it->second.getComY();
-		if (minX < currX && currX < maxX && minY < currY && currY < maxY)
-			return &(it->second);
+	if (theBoxType == normal) {
+		for (unordered_map<string, Box>::iterator it = theBoxes.begin();
+			it != theBoxes.end(); it++) {
+			currX = it->second.getComX();
+			currY = it->second.getComY();
+			if (minX < currX && currX < maxX && minY < currY && currY < maxY)
+				return &(it->second);
+		}
+	}
+	else if (theBoxType == engine) {
+		for (auto& currBox: *(currRocket->getTheEngineBoxes())) {
+			currX = currBox.second->getComX();
+			currY = currBox.second->getComY();
+			if (minX < currX && currX < maxX && minY < currY && currY < maxY)
+				return currBox.second;
+		}
+	}
+
+	else if (theBoxType == payload) {
+		for (auto& currBox : *(currRocket->getThePayloadBoxes())) {
+			currX = currBox.second->getComX();
+			currY = currBox.second->getComY();
+			if (minX < currX && currX < maxX && minY < currY && currY < maxY)
+				return currBox.second;
+		}
 	}
 
 	return nullptr;
@@ -945,6 +997,9 @@ Box* Manager::findBox(double x, double y, double distance)
 
 	//return nullptr;
 }
+
+
+
 // Gladys
 Box* Manager::findBox(const string& givenLabel)
 {
@@ -1035,7 +1090,7 @@ string Manager::getRocketLabelFromConsole()
 {
 	string longInput;
 	cout << endl << "            Name of your rocket >> ";
-	getline(cin, longInput);
+	cin >> longInput;
 
 	showMenu(); // So that it is "fresh"
 
@@ -1115,22 +1170,40 @@ void Manager::draw()
 		//screenH = it->second.getHeight() * viewScale;
 		//DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 
 		//	it->second.getWidth(), it->second.getHeight(), it->second.getHue(), it->second.getIsHighlighted());
-		DrawingUtilNG::drawCube(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 0, it->second.getRightUpperX(), it->second.getRightUpperY(), -10, it->second.getHue(), it->second.getIsHighlighted());
+		DrawingUtilNG::drawCube(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 0, it->second.getRightUpperX(), it->second.getRightUpperY(), -10, it->second.getHue(), it->second.getIsHighlighted(),false,false);
 	}
 
 	// draw the boxes of each rocket
 	// loop through rockets
 	for (auto& aRocket : theRockets) {
-		// loop through engine boxes of each rocket
-		for (auto& currEngineBox : *(aRocket.second->getTheEngineBoxes())) {
-			DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
-				0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
-				-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted());
+		// if rocket is current, add an extra red border to its engine boxes and blue border to payload boxes
+		if ((currRocket->getLabel()).compare(aRocket.first) == 0) {
+			// loop through engine boxes of each rocket
+			for (auto& currEngineBox : *(aRocket.second->getTheEngineBoxes())) {
+				DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
+					0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
+					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(),true,false);
+			}
+			for (auto& currPayloadBox : *(aRocket.second->getThePayloadBoxes())) {
+				DrawingUtilNG::drawCube(currPayloadBox.second->getLeftUpperX(), currPayloadBox.second->getLeftLowerY(),
+					0, currPayloadBox.second->getRightUpperX(), currPayloadBox.second->getRightUpperY(),
+					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(),false,true);
+			}
 		}
-
+		else {
+			// loop through engine boxes of each rocket
+			for (auto& currEngineBox : *(aRocket.second->getTheEngineBoxes())) {
+				DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
+					0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
+					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(),false, false);
+			}
+			for (auto& currPayloadBox : *(aRocket.second->getThePayloadBoxes())) {
+				DrawingUtilNG::drawCube(currPayloadBox.second->getLeftUpperX(), currPayloadBox.second->getLeftLowerY(),
+					0, currPayloadBox.second->getRightUpperX(), currPayloadBox.second->getRightUpperY(),
+					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(),false, false);
+			}
+		}
 	}
-
-
 }
 
 
@@ -1194,7 +1267,11 @@ bool Manager::buildRocket()
 		cin >> rocketChoice;
 		// set the current rocket 
 		if (theRockets.find(rocketChoice) != theRockets.end()) {
-			currRocket = theRockets.find(rocketChoice)->second;
+			if (currRocket != nullptr)
+				currRocket->toggleIsCurrent(); // toggle to false the original current rocket's status as current rocket
+			currRocket = theRockets.find(rocketChoice)->second; // set new current rocket
+			currRocket->toggleIsCurrent(); // toggle the new rocket's current status as true
+			cout << "The rocket to be edited is " << currRocket->getLabel() << endl;
 		}
 		else {
 			cout << "Your choice does not match any existing rocket" << endl;
@@ -1203,6 +1280,8 @@ bool Manager::buildRocket()
 
 	}
 	else if (userChoice == 'n' || userChoice == 'N') {
+		if (currRocket != nullptr)
+			currRocket->toggleIsCurrent(); // toggle to false the original current rocket's status as current rocket
 		// get a rocket name from the user
 		string newRocketLabel;
 		newRocketLabel = getRocketLabelFromConsole();
@@ -1211,13 +1290,14 @@ bool Manager::buildRocket()
 
 		theRockets.insert({ newRocketLabel, currRocket });
 		currRocket = theRockets.find(newRocketLabel)->second;
+		cout << "The new rocket to be built is " << currRocket->getLabel() << endl;
 	}
 	else {
 		cout << "Your input is not one of the choices. Returning to main menu" << endl;
 		return false;
 	}
 
-	cout << "The rocket to be edited is " << currRocket->getLabel() << endl;
+	
 
 	return editRocketComponents(*currRocket);
 
@@ -1275,10 +1355,89 @@ bool Manager::editRocketComponents(Rocket& theRocket) {
 			}
 			else if (boxChoice == 'p' || boxChoice == 'P') {
 				// returns once successfully make payloadBox
-				return makePayloadBox();
+				if (PayloadBox* newPayloadBox = theRocket.makePayloadBox(*this))
+					return true;
+				else
+					return false;
 			}
 		}
+		else if (operationChoice == 'e' || operationChoice == 'E') {
+			cout << "Do you want to add engineBox (E) or payloadBox (P)?" << endl;
+			cin >> boxChoice;
+			if (boxChoice == 'e' || boxChoice == 'E') {
+				// returns true if successfully make engineBox
+				if (EngineBox* newEngineBox = theRocket.makeEngineBox(*this))
+					return true;
+				else
+					return false;
+			}
+			else if (boxChoice == 'p' || boxChoice == 'P') {
+				// returns once successfully make payloadBox
+				if (PayloadBox* newPayloadBox = theRocket.makePayloadBox(*this))
+					return true;
+				else
+					return false;
+			}
+		}
+		else if (operationChoice == 'd' || operationChoice == 'd') {
+			cout << "Do you want to delete an engineBox (E) or payloadBox (P)?" << endl;
+			cin >> boxChoice;
+
+			if (boxChoice == 'e' || boxChoice == 'E') {
+				// returns true if successfully make engineBox
+				/*cout << "Please select one of the highlighted boxes to delete in the window." << endl;*/
+				waitForSelection("Please select one of the highlighted red boxes to delete in the window.");
+				deleteBox(engine);
+				return true;
+				/*if (EngineBox* newEngineBox = theRocket.makeEngineBox(*this))
+					return true;
+				else
+					return false;*/
+			}
+			else if (boxChoice == 'p' || boxChoice == 'P') {
+				waitForSelection("Please select one of the highlighted blue boxes to delete in the window.");
+				deleteBox(payload);
+				return true;
+			}
+
+		}
 	}
+}
+
+void Manager::waitForSelection(string toPrint) {
+	FsPollDevice();
+	int key = FsInkey();
+	int mouseEvent, leftButton, middleButton, rightButton;
+	int locX, locY;
+	double modelX, modelY;
+	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+	cout << toPrint << endl; // instructs users 
+	do
+	{
+		draw();
+		drawAxes();
+
+		getModelCoords(modelX, modelY, locX, locY);
+
+		glBegin(GL_QUADS);
+
+		glVertex3d(modelX - 12 / viewScale, modelY - 12 / viewScale, 0);
+		glVertex3d(modelX - 12 / viewScale, modelY + 12 / viewScale, 0);
+		glVertex3d(modelX + 12 / viewScale, modelY + 12 / viewScale, 0);
+		glVertex3d(modelX + 12 / viewScale, modelY - 12 / viewScale, 0);
+
+		glEnd();
+
+		FsSwapBuffers();
+
+		FsPollDevice();
+		key = FsInkey();
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+
+		
+	} while (!leftButton);
+
+
 }
 
 //bool Manager::makeEngineBox() {
