@@ -487,9 +487,10 @@ void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
 {
 	this->camera = &camera;
 	this->orbit = &orbit;
-	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
+	//FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
 
 	png[0].Decode("grass.png");
+	png[1].Decode("starry.png");
 
 	glGenTextures(1, &texId[0]);
 	glBindTexture(GL_TEXTURE_2D, texId[0]);
@@ -507,6 +508,24 @@ void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
 		GL_RGBA,
 		GL_UNSIGNED_BYTE,
 		png[0].rgba);
+
+
+	glGenTextures(1, &texId[1]);
+	glBindTexture(GL_TEXTURE_2D, texId[1]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D
+	(GL_TEXTURE_2D,
+		0,    // Level of detail
+		GL_RGBA,       // the "A" in RGBA will include the transparency
+		png[1].wid,    // the hippos width and height
+		png[1].hei,
+		0,    // Border width, but not supported and needs to be 0.
+		GL_RGBA,
+		GL_UNSIGNED_BYTE,
+		png[1].rgba);
 
 
 	
@@ -970,8 +989,6 @@ else
 
 void Manager::drawGround()
 {
-	
-	
 	int max = 500;
 	int min = -max;
 	int steps = 6;
@@ -1003,9 +1020,51 @@ void Manager::drawGround()
 
 			glEnd();
 			glDisable(GL_BLEND);
+			glDisable(GL_TEXTURE_2D);
 		}
 	}
 	
+
+
+}
+
+void Manager::drawStarry()
+{
+	int max = 500;
+	int min = -max;
+	int steps = 10;
+	double stepsize = (max - min) / steps;
+
+	for (int i = 0; i < steps; i++)
+	{
+		for (int j = 0; j < steps; j++)
+		{
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glColor4d(1.0, 1.0, 1.0, 1.0);
+
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, texId[1]);
+			glPolygonOffset(1, 1);
+			glBegin(GL_QUADS);
+
+			glTexCoord2d(0.0, 0.0);
+			glVertex3d(min + stepsize * j, min + stepsize * i, -100);
+
+			glTexCoord2d(1.0, 0.0);
+			glVertex3d(min + stepsize * (j + 1), min + stepsize * i, -100);
+
+			glTexCoord2d(1.0, 1.0);
+			glVertex3d(min + stepsize * (j + 1), min + stepsize * (i + 1), -100);
+
+			glTexCoord2d(0.0, 1.0);
+			glVertex3d(min + stepsize * j, min + stepsize * (i + 1), -100);
+
+			glEnd();
+			glDisable(GL_BLEND);
+			glDisable(GL_TEXTURE_2D);
+		}
+	}
+
 
 
 }
@@ -1418,6 +1477,7 @@ void Manager::draw()
 
 
 	drawGround();
+	drawStarry();
 
 }
 

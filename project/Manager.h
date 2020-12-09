@@ -128,6 +128,8 @@ public:
 
 	void drawGround();
 
+	void drawStarry();
+
 	void editBox();
 
 	void editBox(Box& toEdit);

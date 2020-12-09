@@ -10,13 +10,15 @@
 using namespace std;
 
 int main(void) {
+	FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
+
 	Manager theManager;
 
 	// show menu on console
 	theManager.showMenu();
 
 	// set up graphics window
-	//FsOpenWindow(16, 16, WIN_WIDTH, WIN_HEIGHT, 1, "Box");
+	
 
 	bool terminate = false;
 	Camera3D camera;
