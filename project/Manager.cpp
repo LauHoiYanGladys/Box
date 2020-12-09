@@ -51,7 +51,7 @@ Manager::Manager()
 
 
 	currRocket = nullptr;
-
+	deltaT = 0.1;
 
 }
 // Gladys
@@ -244,7 +244,6 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	if (FsGetKeyState(FSKEY_F) && orbit.dist > 2) {
 		orbit.dist /= 1.05;
 		viewScale *= 1.05;
-
 	}
 
 	if (FsGetKeyState(FSKEY_B) && orbit.dist < camera.farZ * .8) {
@@ -253,14 +252,6 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	}
 
-	if (FsGetKeyState(FSKEY_J))
-		orbit.focusX += 2.;
-	if (FsGetKeyState(FSKEY_L))
-		orbit.focusX -= 2.;
-	if (FsGetKeyState(FSKEY_I))
-		orbit.focusY += 2.;
-	if (FsGetKeyState(FSKEY_K))
-		orbit.focusY -= 2.;
 
 	if (key == FSKEY_Z)
 		snapFaceOn(orbit, camera);
@@ -372,7 +363,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	if (theMode == rocketBuildMode && FsGetKeyState(FSKEY_T)) {
 		if (buildRocket())
-			cout << "Rocket built!" << endl;
+			cout << "Rocket " << currRocket->label << " built!" << endl;
 	}
 
 
@@ -391,6 +382,27 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 			/*currBox.second.fall(0.025);*/
 			currBox.second.fall(0.1);
 		}
+	}
+
+	// if in rocket launch mode
+	if (theMode == rocketFlyMode && FsGetKeyState(FSKEY_G) && currRocket!=nullptr) {
+		while (theMode == rocketFlyMode) {
+			// make the boxes of the current rocket move as they should
+			currRocket->fly(deltaT,*this);
+			// camera follows rocket in the y direction during flight
+			orbit.focusY += currRocket->velocity * deltaT;
+		}
+	}
+	else {
+		// allow user to pan in both x and y directions
+		if (FsGetKeyState(FSKEY_J))
+			orbit.focusX += 2.;
+		if (FsGetKeyState(FSKEY_L))
+			orbit.focusX -= 2.;
+		if (FsGetKeyState(FSKEY_I))
+			orbit.focusY += 2.;
+		if (FsGetKeyState(FSKEY_K))
+			orbit.focusY -= 2.;
 	}
 
 	FsPollDevice();
@@ -1378,11 +1390,13 @@ void Manager::draw()
 				DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
 					0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
 					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(),true,false);
+				/*cout << "engine boxes drawn." << endl;*/
 			}
 			for (auto& currPayloadBox : *(aRocket.second->getThePayloadBoxes())) {
 				DrawingUtilNG::drawCube(currPayloadBox.second->getLeftUpperX(), currPayloadBox.second->getLeftLowerY(),
 					0, currPayloadBox.second->getRightUpperX(), currPayloadBox.second->getRightUpperY(),
 					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(),false,true);
+				/*cout << "payload boxes drawn." << endl;*/
 			}
 		}
 		else {
@@ -1391,11 +1405,13 @@ void Manager::draw()
 				DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
 					0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
 					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(),false, false);
+				/*cout << "engine boxes drawn." << endl;*/
 			}
 			for (auto& currPayloadBox : *(aRocket.second->getThePayloadBoxes())) {
 				DrawingUtilNG::drawCube(currPayloadBox.second->getLeftUpperX(), currPayloadBox.second->getLeftLowerY(),
 					0, currPayloadBox.second->getRightUpperX(), currPayloadBox.second->getRightUpperY(),
 					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(),false, false);
+				/*cout << "payload boxes drawn." << endl;*/
 			}
 		}
 	}
@@ -1639,6 +1655,13 @@ void Manager::waitForSelection(string toPrint) {
 
 }
 
+//void Manager::launchRocket()
+//{
+//	
+//	
+//
+//}
+
 //bool Manager::makeEngineBox() {
 //	FsPollDevice();
 //	int key = FsInkey();
@@ -1795,6 +1818,11 @@ void Manager::waitForSelection(string toPrint) {
 //
 //	return true;
 //}
+
+bool Manager::makeEngineBox()
+{
+	return false;
+}
 
 bool Manager::makePayloadBox() {
 	FsPollDevice();

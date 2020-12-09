@@ -178,16 +178,22 @@ public:
 	double getBurnTime() { return burnTime; };
 
 	// initial settings
-	void setThrust(double theThrust) { thrust = theThrust; std::cout << "setting thrust to " << thrust << std::endl; };
-	void setPropellantMassFlow(double thePropellantMassFlow) { propellantMassFlow = thePropellantMassFlow; };
+	void setThrust(double theThrust) { thrust = theThrust; std::cout << "setting thrust to " << thrust << std::endl; updateDependentParams(); };
+	void setPropellantMassFlow(double thePropellantMassFlow) { propellantMassFlow = thePropellantMassFlow; updateDependentParams();};
 
 	double getThrust() { return thrust; };
 	double getPropellantMassFlow() { return propellantMassFlow; }
 
+	// update dependent params
+	void updateDependentParams() { 
+		effectiveExhaustVelocity = thrust / propellantMassFlow; 
+		burnTime = propellantMass / propellantMassFlow;
+	}
 
 	// increment ComY
 	void incrementComY(double incrementY) {
 		comY += incrementY;
+		setBounds();
 	}
 
 	// update propellant and structural mass after dimensions have changed
@@ -195,6 +201,10 @@ public:
 		propellantMass = xDim * yDim; // initially set to be equal to box area, can change with adding/removing propellant
 		structuralMass = 0.1 * xDim * yDim;
 	};
+	void fly(double deltaT, double rocketVelocity) {
+		comY += (rocketVelocity * deltaT);
+		setBounds();
+	}
 
 };
 
@@ -211,9 +221,14 @@ public:
 	// increment ComY
 	void incrementComY(double incrementY) {
 		comY += incrementY;
+		setBounds();
 	}
 	// update payload mass after dimensions have changed
 	void updateMass() {
 		payloadMass = xDim * yDim;
 	};
+	void fly(double deltaT, double rocketVelocity) {
+		comY += (rocketVelocity * deltaT);
+		setBounds();
+	}
 };

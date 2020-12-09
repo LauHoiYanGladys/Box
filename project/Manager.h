@@ -68,6 +68,8 @@ private:
 	string currRocketLabel;
 	ComicSansFont comicsans;
 	ImpactFont impact;
+	friend class Rocket;
+	double deltaT;
 
 public:
 	//int key;
@@ -189,6 +191,7 @@ public:
 	bool makePayloadBox();
 
 	void waitForSelection(string toPrint);
+	void launchRocket();
 };
 
 

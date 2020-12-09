@@ -29,6 +29,7 @@ private:
 	int engineBoxCounter, payloadBoxCounter;
 	bool isCurrent;
 	enum rocketBoxType { engine, payload };
+	friend class Manager;
 public:
 	Rocket(std::string& theLabel) {
 		label = theLabel;
@@ -70,12 +71,17 @@ public:
 	// compute COM from scratch (weighted average of payloadBox and EngineBox Com)
 	void computeCom();
 
+	// updates propellant mass fraction
+	void updatePMF() {
+		propellantMassFraction = totalPropellantMass / initialMass;
+	};
+
 	// update COM (used when a given box is changed or added/removed
 	void updateCom(EngineBox& anEngineBox);
 	void updateCom(PayloadBox& aPayloadBox);
 
 	// updates position of rocket
-	void fly(double deltaT);
+	void fly(double deltaT, Manager& theManager);
 
 	// get current COM
 	double getComX() { return comX; };
