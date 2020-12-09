@@ -55,6 +55,8 @@ private:
 
 	double modelComX, modelComY, modelComZ;
 
+	double adjustAmt = 2;
+
 	vector<std::unordered_map<std::string, Box>> boxStates;
 
 	enum overlappingDimension { x, both };

@@ -10,7 +10,7 @@ void Box::fall(double deltaT)
 {
 	// Box class has Y-coordinate of COM (comY), velocity, fallDuration. There is also a constant gravity for all
 
-	if (yDistanceFromBelow > 0.) {
+	if (yDistanceFromBelow >= 1) {
 		/*setComY(comY - (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT));*/
 		comY -= (velocity * deltaT + 0.5 * GRAVITY * deltaT * deltaT);
 		setBounds();
@@ -18,6 +18,12 @@ void Box::fall(double deltaT)
 
 		// recalculates currVel by applying currAccel for deltaT
 		velocity += GRAVITY * deltaT;
+	}
+	else if (yDistanceFromBelow > 0 && yDistanceFromBelow < 1)
+	{
+		comY -= yDistanceFromBelow;
+		yDistanceFromBelow = 0;
+
 	}
 
 	

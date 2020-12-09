@@ -264,6 +264,32 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	}
 
+	if (FsGetKeyState(FSKEY_1))
+		adjustAmt += .5;
+	if (FsGetKeyState(FSKEY_2))
+		adjustAmt -= .5;
+
+	if (FsGetKeyState(FSKEY_J))
+	{
+		orbit.focusX += 2.;
+		xOrigin -= adjustAmt;
+	}
+	if (FsGetKeyState(FSKEY_L))
+	{
+		orbit.focusX -= 2.;
+		xOrigin += adjustAmt;
+	}
+	if (FsGetKeyState(FSKEY_I))
+	{
+		orbit.focusY += 2.;
+		yOrigin += adjustAmt;
+	}
+	if (FsGetKeyState(FSKEY_K))
+	{
+		orbit.focusY -= 2.;
+		yOrigin -= adjustAmt;
+	}
+
 
 	if (key == FSKEY_Z)
 		snapFaceOn(orbit, camera);
@@ -307,7 +333,14 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	case FSKEY_S: save();
 		break;
+
 	case FSKEY_Y: load();
+
+		break;
+	case FSKEY_Q: addBox(camera, orbit);
+		break;
+	case FSKEY_W: editBox();
+
 		break;
 
 	case FSKEY_Q: 
@@ -452,7 +485,32 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	glEnd();
 
+
 	drawBasicText(camera, orbit);
+
+	
+	// Set up 2D drawing (commented out because of lagging)
+	
+	impact.setColorHSV(300, 1, 1);
+	drawText2d("I'm Orbiting!",impact, 10, 60, .4);
+
+	std::string data;
+	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
+	comicsans.setColorHSV(300, 1, .5);
+	//comicsans.drawText(data, 10, 80, .15);
+	drawText2d(data, comicsans, 10, 80, .15);
+
+	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+	drawText2d(data, comicsans, 10, 95, .15);
+
+	data = "Adjust Amount = " + std::to_string(adjustAmt);
+	drawText2d(data, comicsans, 10, 120, .3);
+
+	/*ComicSansFont comicsans;
+	comicsans.setColorHSV(300, 1, 1);
+	ImpactFont impact;*/
+
 
 	FsSwapBuffers();
 
@@ -1434,7 +1492,7 @@ void Manager::centerOnScreen()
 {
 	double scaleX = WIN_WIDTH / (maxX - minX);
 	double scaleY = WIN_HEIGHT / (maxY - minY);
-	viewScale = min(scaleX, scaleY) * 0.95;   // leaves a little bit of white space all around
+	//viewScale = min(scaleX, scaleY) * 0.95;   // leaves a little bit of white space all around
 	xOrigin = WIN_WIDTH / 2 - viewScale * (maxX + minX) / 2;
 	yOrigin = WIN_HEIGHT / 2 + viewScale * (maxY + minY) / 2;
 }
