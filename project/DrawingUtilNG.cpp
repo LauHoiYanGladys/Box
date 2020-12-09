@@ -585,7 +585,7 @@ void DrawingUtilNG::drawCube(double x1, double y1, double z1,
 	if (isHighlighted) {
 		glLineWidth(3);
 		glBegin(GL_LINE_LOOP);
-		glColor3f(0.0f, 0.0f, 0.0f); // black border
+		glColor3f(1.0f, 1.0f, 1.0f); // white border
 		glVertex3d(x1, y1, 0);
 		glVertex3d(x2, y1, 0);
 		glVertex3d(x2, y2, 0);

@@ -70,6 +70,8 @@ private:
 	ImpactFont impact;
 	friend class Rocket;
 	double deltaT;
+	vector<string> rocketLabels;
+	int rocketCounter;
 
 public:
 	//int key;
@@ -114,6 +116,8 @@ public:
 		gravityIsOn = !gravityIsOn;
 	}
 
+	void switchCurrentRocket();
+
 	void showMenu();
 
 	bool manage(Camera3D& camera, OrbitingViewer& orbit);
@@ -130,9 +134,9 @@ public:
 
 	void drawStarry();
 
-	void editBox();
+	void editBox(Camera3D& camera, OrbitingViewer& orbit);
 
-	void editBox(Box& toEdit);
+	void editBox(Box& toEdit, Camera3D& camera, OrbitingViewer& orbit);
 
 	void deleteBox();
 
@@ -175,7 +179,7 @@ public:
 
 	void centerOnScreen();
 
-	void drawEditModeIndicator();
+	/*void drawEditModeIndicator();*/
 
 	/*void highlightBox(Box& aBox);*/
 	void draw();
@@ -193,7 +197,7 @@ public:
 	bool makePayloadBox();
 
 	void waitForSelection(string toPrint);
-	void launchRocket();
+	void drawBasicText(Camera3D& camera, OrbitingViewer& orbit);
 };
 
 

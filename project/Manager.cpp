@@ -52,7 +52,7 @@ Manager::Manager()
 
 	currRocket = nullptr;
 	deltaT = 0.1;
-
+	rocketCounter = 0;
 }
 // Gladys
 bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension theDimension)
@@ -100,6 +100,18 @@ bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension
 	cout << "Not Intersecting" << endl;
 	return false;
 
+}
+
+void Manager::switchCurrentRocket()
+{
+	if (theRockets.size() > 1)
+		// set previous current rocket's current status as false
+		currRocket->isCurrent = false;
+		// set new current rocket
+		int index = (rocketCounter + 1) % (theRockets.size());
+		currRocket = theRockets.at(rocketLabels[index]);
+		currRocket->isCurrent = true;
+		rocketCounter++;
 }
 
 void Manager::showMenu()
@@ -295,13 +307,25 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	case FSKEY_S: save();
 		break;
-	case FSKEY_L: load();
-		break;
-	case FSKEY_Q: addBox(camera, orbit);
-		break;
-	case FSKEY_W: editBox();
+	case FSKEY_Y: load();
 		break;
 
+	case FSKEY_Q: 
+		if (theMode == editMode)
+			addBox(camera, orbit);
+		break; 
+	case FSKEY_W: 
+		if (theMode == editMode)
+			editBox(camera, orbit);
+		break; 
+	/*case FSKEY_Q: addBox(camera, orbit); 
+		break; 
+	case FSKEY_W: editBox(camera, orbit);
+		break;*/
+	case FSKEY_C: 
+		if (theMode == rocketFlyMode)
+			switchCurrentRocket();
+		break;
 	}
 	// Gladys
 	// if in edit mode
@@ -364,6 +388,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	if (theMode == rocketBuildMode && FsGetKeyState(FSKEY_T)) {
 		if (buildRocket())
 			cout << "Rocket " << currRocket->label << " built!" << endl;
+
 	}
 
 
@@ -385,12 +410,17 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	}
 
 	// if in rocket launch mode
-	if (theMode == rocketFlyMode && FsGetKeyState(FSKEY_G) && currRocket!=nullptr) {
-		while (theMode == rocketFlyMode) {
-			// make the boxes of the current rocket move as they should
-			currRocket->fly(deltaT,*this);
-			// camera follows rocket in the y direction during flight
-			orbit.focusY += currRocket->velocity * deltaT;
+	if (theMode == rocketFlyMode && key == FSKEY_G && currRocket != nullptr && !currRocket->flightEnded) {
+		if (currRocket->thePayloadBoxes.empty())
+			cout << "At least 1 payload box is needed to launch. Currently none" << endl;
+		if (currRocket->theEngineBoxes.empty())
+			cout << "At least 1 engine box is needed to launch. Currently none" << endl;
+		else {
+			// keeps flying until return to ground, make the boxes of the current rocket move as they should
+			while (theMode == rocketFlyMode && currRocket->fly(deltaT, *this, camera, orbit)) {
+				// camera follows rocket in the y direction during flight (this is moved to Rocket.fly)
+				/*orbit.focusY += currRocket->velocity * deltaT;*/
+			}
 		}
 	}
 	else {
@@ -422,48 +452,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	glEnd();
 
-	
-	// Set up 2D drawing (commented out because of lagging)
-	
-	impact.setColorHSV(300, 1, 1);
-	drawText2d("I'm Orbiting!",impact, 10, 60, .4);
+	drawBasicText(camera, orbit);
 
-	std::string data;
-	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
-	comicsans.setColorHSV(300, 1, .5);
-	//comicsans.drawText(data, 10, 80, .15);
-	drawText2d(data, comicsans, 10, 80, .15);
-
-	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
-		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-	drawText2d(data, comicsans, 10, 95, .15);
-
-	/*ComicSansFont comicsans;
-	comicsans.setColorHSV(300, 1, 1);
-	ImpactFont impact;
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	glDisable(GL_DEPTH_TEST);
-
-	comicsans.drawText("Box's current Position", 10, 30, .25);
-
-	std::string data;
-	if (!theBoxes.empty()) {
-		data = "X=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX()) + " Y=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX());
-		comicsans.setColorHSV(300, 1, .5);
-		comicsans.drawText(data, 10, 80, .15);
-
-		data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
-			+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
-		comicsans.drawText(data, 10, 95, .15);
-
-	}*/
 	FsSwapBuffers();
 
 	//string inFileName;
@@ -528,7 +518,7 @@ void Manager::manageSetup(Camera3D& camera, OrbitingViewer& orbit)
 		png[1].rgba);
 
 
-	
+
 	comicsans.init();
 	impact.init();
 
@@ -673,38 +663,51 @@ void Manager::readFile(ifstream& inFile)
 
 }
 
-void Manager::editBox()
+void Manager::editBox(Camera3D& camera, OrbitingViewer& orbit)
 {
-	FsPollDevice();
-	int key = FsInkey();
-	int mouseEvent, leftButton, middleButton, rightButton;
-	int locX, locY;
-	double modelX = 0, modelY = 0;
-	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-	getModelCoords(modelX, modelY, locX, locY);
-	Box* toEdit = findBox(modelX, modelY, 10, normal);
-	while (toEdit == nullptr)
-	{
-
-		FsPollDevice();
-
-		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-		getModelCoords(modelX, modelY, locX, locY);
-		if (leftButton)
-		{
-			toEdit = findBox(modelX, modelY, 10,normal);
-			if (toEdit == nullptr)
-				cout << "nullptr" << endl;
-		}
-
-
+	drawBasicText(camera, orbit);
+	if (theBoxes.empty()) {
+		cout << "No boxes to edit" << endl;
+		return;
 	}
-	editBox(*toEdit);
-	assignYDistanceFromBelow(*toEdit);
+	else {
+		/*FsPollDevice();
+		int key = FsInkey();
+		int mouseEvent, leftButton, middleButton, rightButton;
+		int locX, locY;
+		double modelX = 0, modelY = 0;
+		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+		getModelCoords(modelX, modelY, locX, locY);*/
+
+		//while (!selectedBoxes.size() != 1); // wait for the number of selected boxes to be 1
+			
+		Box* toEdit = selectedBoxes.begin()->second;
+		/*Box* toEdit = findBox(modelX, modelY, 10, normal);
+		while (toEdit == nullptr)
+		{
+
+			FsPollDevice();
+
+			mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+			getModelCoords(modelX, modelY, locX, locY);
+			if (leftButton)
+			{
+				toEdit = findBox(modelX, modelY, 10, normal);
+				if (toEdit == nullptr)
+					cout << "nullptr" << endl;
+			}
+
+
+		}*/
+		editBox(*toEdit,camera,orbit);
+		assignYDistanceFromBelow(*toEdit);
+		return;
+	}
+
 
 }
 
-void Manager::editBox(Box& toEdit)
+void Manager::editBox(Box& toEdit, Camera3D& camera, OrbitingViewer& orbit)
 {
 	FsPollDevice();
 	int key = FsInkey();
@@ -715,10 +718,21 @@ void Manager::editBox(Box& toEdit)
 	double tX, tY, tH, tW, tHue;
 	toEdit.getParams(tX, tY, tH, tW, tHue); //returns parameters from Box toEdit
 
+	/*drawBasicText(camera, orbit);*/
+
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 	//Set Width
 	do
 	{
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(300, 1, 1);
+		std::string data = "Editing Box: selecting width";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to set width. LMB to confirm.";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Width = " + std::to_string(toEdit.getWidth());
+		drawText2d(data, comicsans, 10, 95, .15);
+
 		if (key == FSKEY_WHEELUP)
 			toEdit.setWidth(min(toEdit.getWidth() + 1, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
@@ -737,6 +751,15 @@ void Manager::editBox(Box& toEdit)
 
 	if (isValidLoc(toEdit))
 	{
+		impact.setColorHSV(300, 1, 1);
+		comicsans.setColorHSV(300, 1, 1);
+		std::string data = "Editing Box: selecting height";
+		drawText2d(data, impact, 10, 65, .5);
+		data = "Use MouseWheel to set height. LMB to confirm";
+		drawText2d(data, comicsans, 10, 80, .15);
+		data = "Height = " + std::to_string(toEdit.getHeight());
+		drawText2d(data, comicsans, 10, 95, .15);
+		
 		//Set Height
 		FsPollDevice();
 		key = FsInkey();
@@ -765,6 +788,15 @@ void Manager::editBox(Box& toEdit)
 
 		if (isValidLoc(toEdit))
 		{
+			impact.setColorHSV(300, 1, 1);
+			comicsans.setColorHSV(toEdit.getHue(), 1, .5);
+			std::string data = "Editing Box: selecting color";
+			drawText2d(data, impact, 10, 65, .5);
+			data = "Use MouseWheel to adjust hue. LMB to confirm.";
+			drawText2d(data, comicsans, 10, 80, .15);
+			data = "Hue = " + std::to_string(toEdit.getHue());
+			drawText2d(data, comicsans, 10, 95, .15);
+
 			//Set Hue
 			while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 			{
@@ -799,8 +831,8 @@ void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 
 	// remember the current state before making changes
 	boxStates.push_back(theBoxes);
-	comicsans.setColorHSV(300, 1, .5);
-	
+	comicsans.setColorHSV(300, 1, 1);
+
 	bool deletedFlag = false;
 
 	FsPollDevice();
@@ -843,14 +875,14 @@ else if (theMode == rocketBuildMode && theRocketBoxType == payload) {
 else
 	currAdd = nullptr;*/
 	//Set Width
-	
-	
+
+
 	while (mouseEvent != FSMOUSEEVENT_LBUTTONDOWN)
 	{
 		draw();
 		drawAxes();
 		impact.setColorHSV(300, 1, 1);
-		comicsans.setColorHSV(300, 1, .5);
+		comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Box: selecting width";
 		drawText2d(data, impact, 10, 65, .5);
 		data = "Use MouseWheel to set width. LMB to confirm.";
@@ -885,7 +917,7 @@ else
 		draw();
 		drawAxes();
 		impact.setColorHSV(300, 1, 1);
-		comicsans.setColorHSV(300, 1, .5);
+		comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Box: selecting height";
 		drawText2d(data, impact, 10, 65, .5);
 		data = "Use MouseWheel to set height. LMB to confirm";
@@ -949,7 +981,7 @@ else
 		draw();
 		drawAxes();
 		impact.setColorHSV(300, 1, 1);
-		comicsans.setColorHSV(currAdd->second.getHue(), 1, .5);
+		comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Box: selecting location";
 		drawText2d(data, impact, 10, 65, .5);
 		data = "Move mouse to adjust location. LMB to confirm. RMB to delete.";
@@ -965,7 +997,7 @@ else
 			deletedFlag = true;
 			break;
 		}
-		
+
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -1007,23 +1039,23 @@ void Manager::drawGround()
 			glBegin(GL_QUADS);
 
 			glTexCoord2d(0.0, 0.0);
-			glVertex3d(min+stepsize*j, .01, min+stepsize*i);
+			glVertex3d(min + stepsize * j, .01, min + stepsize * i);
 
 			glTexCoord2d(1.0, 0.0);
-			glVertex3d(min+stepsize*(j+1), .01, min+stepsize*i);
+			glVertex3d(min + stepsize * (j + 1), .01, min + stepsize * i);
 
 			glTexCoord2d(1.0, 1.0);
-			glVertex3d(min+stepsize*(j+1), .01, min+stepsize*(i+1));
+			glVertex3d(min + stepsize * (j + 1), .01, min + stepsize * (i + 1));
 
 			glTexCoord2d(0.0, 1.0);
-			glVertex3d(min+stepsize*j, .01, min+stepsize*(i+1));
+			glVertex3d(min + stepsize * j, .01, min + stepsize * (i + 1));
 
 			glEnd();
 			glDisable(GL_BLEND);
 			glDisable(GL_TEXTURE_2D);
 		}
 	}
-	
+
 
 
 }
@@ -1111,28 +1143,45 @@ void Manager::deleteBox(boxType theBoxType)
 	mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
 	getModelCoords(modelX, modelY, locX, locY);
-	
+
+	draw();
+	drawAxes();
+	FsSwapBuffers();
+
+
 	Box* toDelete = findBox(modelX, modelY, 3, theBoxType);
 
 	if (toDelete == nullptr) {
 		cout << "no box found to delete" << endl;
 		return;
 	}
-	
+
 	string theLabel = toDelete->getLabel();
 	if (theBoxType == engine) {
 		currRocket->getTheEngineBoxes()->erase(toDelete->getLabel());
 		currRocket->deleteBox(toDelete);
-		cout << "Engine Box " << theLabel << " of Rocket " << currRocket->getLabel() << "has been deleted" << endl;
+		draw();
+		drawAxes();
+		FsSwapBuffers();
+		cout << "Engine Box " << theLabel << " of Rocket " << currRocket->getLabel() << " has been deleted" << endl;
+		return;
 	}
 	else if (theBoxType == payload) {
 		currRocket->getThePayloadBoxes()->erase(toDelete->getLabel());
 		currRocket->deleteBox(toDelete);
-		cout << "Payload Box " << theLabel << " of Rocket " << currRocket->getLabel() << "has been deleted" << endl;
+		draw();
+		drawAxes();
+		FsSwapBuffers();
+		cout << "Payload Box " << theLabel << " of Rocket " << currRocket->getLabel() << " has been deleted" << endl;
+		return;
 	}
 	else if (theBoxType == normal) {
 		theBoxes.erase(toDelete->getLabel());
+		draw();
+		drawAxes();
+		FsSwapBuffers();
 		cout << "Normal Box " << theLabel << "has been deleted" << endl;
+		return;
 	}
 	cout << "Deletion failed. No box was deleted." << endl;
 }
@@ -1216,6 +1265,10 @@ void Manager::assignYDistanceFromBelow(Box& aBox)
 // Gladys
 Box* Manager::findBox(double x, double y, double distance, boxType theBoxType)
 {
+	//draw();
+	//drawAxes();
+	//FsSwapBuffers();
+
 	double minX = x - distance, maxX = x + distance;
 	double minY = y - distance, maxY = y + distance;
 	double currX, currY;
@@ -1229,7 +1282,7 @@ Box* Manager::findBox(double x, double y, double distance, boxType theBoxType)
 		}
 	}
 	else if (theBoxType == engine) {
-		for (auto& currBox: *(currRocket->getTheEngineBoxes())) {
+		for (auto& currBox : *(currRocket->getTheEngineBoxes())) {
 			currX = currBox.second->getComX();
 			currY = currBox.second->getComY();
 			if (minX < currX && currX < maxX && minY < currY && currY < maxY)
@@ -1386,19 +1439,19 @@ void Manager::centerOnScreen()
 	yOrigin = WIN_HEIGHT / 2 + viewScale * (maxY + minY) / 2;
 }
 // Gladys
-void Manager::drawEditModeIndicator()
-{
-	glLineWidth(4);
-	glColor3ub(10, 255, 10);
-	DrawingUtilNG::drawRectangle(2, 2, WIN_WIDTH - 5, WIN_HEIGHT - 5, false);
-	DrawingUtilNG::drawRectangle(0, WIN_HEIGHT, 100, -20, true);
-
-	glLineWidth(1);
-	glColor3ub(100, 100, 100);
-	glRasterPos2i(10, WIN_HEIGHT - 5);
-	YsGlDrawFontBitmap8x12("Edit Mode");
-
-}
+//void Manager::drawEditModeIndicator()
+//{
+//	glLineWidth(4);
+//	glColor3ub(10, 255, 10);
+//	DrawingUtilNG::drawRectangle(2, 2, WIN_WIDTH - 5, WIN_HEIGHT - 5, false);
+//	DrawingUtilNG::drawRectangle(0, WIN_HEIGHT, 100, -20, true);
+//
+//	glLineWidth(1);
+//	glColor3ub(100, 100, 100);
+//	glRasterPos2i(10, WIN_HEIGHT - 5);
+//	YsGlDrawFontBitmap8x12("Edit Mode");
+//
+//}
 // Gladys
 //void Manager::highlightBox(Box& aBox)
 //{
@@ -1411,7 +1464,7 @@ void Manager::drawEditModeIndicator()
 
 void Manager::draw()
 {
-	
+
 	double red, green, blue;
 	/*
 	for (int i = 0; i < theBoxes.size(); i++) {
@@ -1436,7 +1489,7 @@ void Manager::draw()
 		//screenH = it->second.getHeight() * viewScale;
 		//DrawingUtilNG::drawRectangle3D(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 
 		//	it->second.getWidth(), it->second.getHeight(), it->second.getHue(), it->second.getIsHighlighted());
-		DrawingUtilNG::drawCube(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 0, it->second.getRightUpperX(), it->second.getRightUpperY(), -10, it->second.getHue(), it->second.getIsHighlighted(),false,false);
+		DrawingUtilNG::drawCube(it->second.getLeftUpperX(), it->second.getLeftLowerY(), 0, it->second.getRightUpperX(), it->second.getRightUpperY(), -10, it->second.getHue(), it->second.getIsHighlighted(), false, false);
 	}
 
 	// draw the boxes of each rocket
@@ -1448,13 +1501,13 @@ void Manager::draw()
 			for (auto& currEngineBox : *(aRocket.second->getTheEngineBoxes())) {
 				DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
 					0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
-					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(),true,false);
+					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(), true, false);
 				/*cout << "engine boxes drawn." << endl;*/
 			}
 			for (auto& currPayloadBox : *(aRocket.second->getThePayloadBoxes())) {
 				DrawingUtilNG::drawCube(currPayloadBox.second->getLeftUpperX(), currPayloadBox.second->getLeftLowerY(),
 					0, currPayloadBox.second->getRightUpperX(), currPayloadBox.second->getRightUpperY(),
-					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(),false,true);
+					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(), false, true);
 				/*cout << "payload boxes drawn." << endl;*/
 			}
 		}
@@ -1463,13 +1516,13 @@ void Manager::draw()
 			for (auto& currEngineBox : *(aRocket.second->getTheEngineBoxes())) {
 				DrawingUtilNG::drawCube(currEngineBox.second->getLeftUpperX(), currEngineBox.second->getLeftLowerY(),
 					0, currEngineBox.second->getRightUpperX(), currEngineBox.second->getRightUpperY(),
-					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(),false, false);
+					-10, currEngineBox.second->getHue(), currEngineBox.second->getIsHighlighted(), false, false);
 				/*cout << "engine boxes drawn." << endl;*/
 			}
 			for (auto& currPayloadBox : *(aRocket.second->getThePayloadBoxes())) {
 				DrawingUtilNG::drawCube(currPayloadBox.second->getLeftUpperX(), currPayloadBox.second->getLeftLowerY(),
 					0, currPayloadBox.second->getRightUpperX(), currPayloadBox.second->getRightUpperY(),
-					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(),false, false);
+					-10, currPayloadBox.second->getHue(), currPayloadBox.second->getIsHighlighted(), false, false);
 				/*cout << "payload boxes drawn." << endl;*/
 			}
 		}
@@ -1564,6 +1617,7 @@ bool Manager::buildRocket()
 		currRocket = new Rocket(newRocketLabel);
 
 		theRockets.insert({ newRocketLabel, currRocket });
+		rocketLabels.push_back(newRocketLabel);
 		currRocket = theRockets.find(newRocketLabel)->second;
 		cout << "The new rocket to be built is " << currRocket->getLabel() << endl;
 	}
@@ -1572,7 +1626,7 @@ bool Manager::buildRocket()
 		return false;
 	}
 
-	
+
 
 	return editRocketComponents(*currRocket);
 
@@ -1615,8 +1669,16 @@ bool Manager::editRocketComponents(Rocket& theRocket) {
 	bool finishBuildRocket = false;
 	char operationChoice;
 	char boxChoice;
+	std::string data;
+
 	while (!finishBuildRocket) {
-		cout << "Do you want to add (A), delete (D) or edit (E) a box?" << endl;
+		//data = "Building Rocket " + theRocket.label;
+		//drawText2d(data, comicsans, 10, 110, .15);
+		//data = "Press M to finish editing";
+		//drawText2d(data, comicsans, 10, 125, .15);
+
+		/*cout << "Do you want to add (A), delete (D) or edit (E) a box, or finish editing (F)?" << endl;*/
+		cout << "Do you want to add (A) or delete (D) a box, or finish editing (F)?" << endl;
 		cin >> operationChoice;
 		if (operationChoice == 'a' || operationChoice == 'A') {
 			cout << "Do you want to add engineBox (E) or payloadBox (P)?" << endl;
@@ -1624,37 +1686,38 @@ bool Manager::editRocketComponents(Rocket& theRocket) {
 			if (boxChoice == 'e' || boxChoice == 'E') {
 				// returns true if successfully make engineBox
 				if (EngineBox* newEngineBox = theRocket.makeEngineBox(*this))
-					return true;
+					cout << "Engine Box " << newEngineBox->getLabel() << " added to Rocket " << theRocket.label << endl;
 				else
-					return false;
+					cout << "Engine Box cannot be added" << endl;
 			}
 			else if (boxChoice == 'p' || boxChoice == 'P') {
 				// returns once successfully make payloadBox
 				if (PayloadBox* newPayloadBox = theRocket.makePayloadBox(*this))
-					return true;
+					cout << "Payload Box " << newPayloadBox->getLabel() << " added to Rocket " << theRocket.label << endl;
 				else
-					return false;
+					cout << "Payload Box cannot be added" << endl;
 			}
 		}
-		else if (operationChoice == 'e' || operationChoice == 'E') {
-			cout << "Do you want to add engineBox (E) or payloadBox (P)?" << endl;
-			cin >> boxChoice;
-			if (boxChoice == 'e' || boxChoice == 'E') {
-				// returns true if successfully make engineBox
-				if (EngineBox* newEngineBox = theRocket.makeEngineBox(*this))
-					return true;
-				else
-					return false;
-			}
-			else if (boxChoice == 'p' || boxChoice == 'P') {
-				// returns once successfully make payloadBox
-				if (PayloadBox* newPayloadBox = theRocket.makePayloadBox(*this))
-					return true;
-				else
-					return false;
-			}
-		}
-		else if (operationChoice == 'd' || operationChoice == 'd') {
+		// maybe add later
+		//else if (operationChoice == 'e' || operationChoice == 'E') {
+		//	cout << "Do you want to add engineBox (E) or payloadBox (P)?" << endl;
+		//	cin >> boxChoice;
+		//	if (boxChoice == 'e' || boxChoice == 'E') {
+		//		// returns true if successfully make engineBox
+		//		if (EngineBox* newEngineBox = theRocket.makeEngineBox(*this))
+		//			return true;
+		//		else
+		//			return false;
+		//	}
+		//	else if (boxChoice == 'p' || boxChoice == 'P') {
+		//		// returns once successfully make payloadBox
+		//		if (PayloadBox* newPayloadBox = theRocket.makePayloadBox(*this))
+		//			return true;
+		//		else
+		//			return false;
+		//	}
+		//}
+		else if (operationChoice == 'd' || operationChoice == 'D') {
 			cout << "Do you want to delete an engineBox (E) or payloadBox (P)?" << endl;
 			cin >> boxChoice;
 
@@ -1663,7 +1726,6 @@ bool Manager::editRocketComponents(Rocket& theRocket) {
 				/*cout << "Please select one of the highlighted boxes to delete in the window." << endl;*/
 				waitForSelection("Please select one of the highlighted red boxes to delete in the window.");
 				deleteBox(engine);
-				return true;
 				/*if (EngineBox* newEngineBox = theRocket.makeEngineBox(*this))
 					return true;
 				else
@@ -1672,11 +1734,15 @@ bool Manager::editRocketComponents(Rocket& theRocket) {
 			else if (boxChoice == 'p' || boxChoice == 'P') {
 				waitForSelection("Please select one of the highlighted blue boxes to delete in the window.");
 				deleteBox(payload);
-				return true;
 			}
 
 		}
+		else if (operationChoice == 'f' || operationChoice == 'F') {
+			cout << "Rocket editing completed." << endl;
+			finishBuildRocket = true;
+		}
 	}
+	return true;
 }
 
 void Manager::waitForSelection(string toPrint) {
@@ -1709,10 +1775,105 @@ void Manager::waitForSelection(string toPrint) {
 		key = FsInkey();
 		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
 
-		
+
 	} while (!leftButton);
 
 
+}
+
+void Manager::drawBasicText(Camera3D& camera, OrbitingViewer& orbit)
+{
+	// Set up 2D drawing (commented out because of lagging)
+	std::string data;
+
+	impact.setColorHSV(300, 1, 1);
+	if (theMode == viewMode)
+		data = "View Mode";
+	else if (theMode == rocketBuildMode)
+		data = "Rocket Build Mode";
+	else if (theMode == rocketFlyMode)
+		data = "Rocket Launch Mode";
+	else if (theMode == editMode)
+		data = "Box Editing Mode";
+
+	drawText2d(data, impact, 10, 60, .4);
+	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
+	comicsans.setColorHSV(300, 1, 1);
+	//comicsans.drawText(data, 10, 80, .15);
+	drawText2d(data, comicsans, 10, 80, .15);
+
+	data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+		+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+	drawText2d(data, comicsans, 10, 95, .15);
+
+	// mode dependent display
+	if (theMode == rocketBuildMode){
+		data = "Press T to start building rocket";
+		drawText2d(data, comicsans, 10, 110, .15);
+	}
+	else if (theMode == rocketFlyMode) {
+		
+		if (currRocket != nullptr) {
+			data = "Press G to launch rocket";
+			drawText2d(data, comicsans, 10, 110, .15);
+			if (theRockets.size() > 1) {
+				data = "Press C to switch current rocket";
+				drawText2d(data, comicsans, 10, 125, .15);
+			}
+			data = "Current rocket is " + currRocket->label;
+			drawText2d(data, comicsans, 10, 140, .15);
+		}
+		else {
+			data = "No current rocket";
+			drawText2d(data, comicsans, 10, 140, .15);
+		}
+			
+	}
+	else if (theMode == viewMode) {
+		data = "Use arrow keys and JKLI keys to view 3D model";
+		drawText2d(data, comicsans, 10, 110, .15);
+	}
+	else if (theMode == editMode) {
+		data = "Press Q to add box, W to edit box";
+		drawText2d(data, comicsans, 10, 110, .15);
+		data = "Hold down M and drag with mouse to move";
+		drawText2d(data, comicsans, 10, 125, .15);
+		data = "LMB to select multiple to move";
+		drawText2d(data, comicsans, 10, 140, .15);
+		if (!selectedBoxes.size() != 1 ) {
+			data = "Select only 1 box to edit";
+			drawText2d(data, comicsans, 10, 155, .15);
+		}	
+	}
+	
+
+
+	/*ComicSansFont comicsans;
+	comicsans.setColorHSV(300, 1, 1);
+	ImpactFont impact;
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, (float)wid - 1, (float)hei - 1, 0, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
+
+	comicsans.drawText("Box's current Position", 10, 30, .25);
+
+	std::string data;
+	if (!theBoxes.empty()) {
+		data = "X=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX()) + " Y=" + std::to_string(theBoxes.find(std::to_string(boxCounter-1))->second.getComX());
+		comicsans.setColorHSV(300, 1, 1);
+		comicsans.drawText(data, 10, 80, .15);
+
+		data = "Camera Orientation: h=" + std::to_string(camera.h * 45. / atan(1.))
+			+ " deg, p=" + std::to_string(camera.p * 45. / atan(1.)) + " deg";
+		comicsans.drawText(data, 10, 95, .15);
+
+	}*/
 }
 
 //void Manager::launchRocket()

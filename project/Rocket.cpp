@@ -38,21 +38,21 @@ void Rocket::addPayloadBox(PayloadBox& aPayloadBox)
 void Rocket::updateVelocity()
 {
 	if (!theEngineBoxes.empty()) {
-		EngineBox* currEngineBox = theEngineBoxes.begin()->second;
+
 		/*double currEffectiveExhaustVelocity = currEngineBox->getEffectiveExhaustVelocity();
 		double currBurnTime = currEngineBox->getBurnTime();*/
 		// update the propellantMassFraction
-		
+
 		/*double timeElapsedInStage = std::chrono::duration_cast<std::chrono::nanoseconds>
 			(std::chrono::high_resolution_clock::now() - begin).count() / 1e9;*/
-		/*velocity = -currEffectiveExhaustVelocity * log(1 - propellantMassFraction * timeElapsedInStage / currBurnTime) + baselineVelocity;*/
+			/*velocity = -currEffectiveExhaustVelocity * log(1 - propellantMassFraction * timeElapsedInStage / currBurnTime) + baselineVelocity;*/
 		double expr = 1 - propellantMassFraction * timeElapsedInStage / currEngineBox->getBurnTime();
-		if (expr>=0) // only update velocity if if the expression is greater than zero
+		if (expr >= 0) // only update velocity if if the expression is greater than zero
 			velocity = -(currEngineBox->getEffectiveExhaustVelocity()) * log(expr) + baselineVelocity;
 	}
 	else
 		std::cout << "No active engine running, velocity cannot be changed" << std::endl;
-	
+
 }
 
 void Rocket::computeCom()
@@ -90,7 +90,7 @@ void Rocket::updateCom(EngineBox& anEngineBox)
 void Rocket::updateCom(PayloadBox& aPayloadBox)
 {
 	double currPayloadMass;
-	
+
 	currPayloadMass = aPayloadBox.getPayloadMass();
 	comMassXSum += aPayloadBox.getComX() * currPayloadMass;
 	comMassYSum += aPayloadBox.getComY() * currPayloadMass;
@@ -99,54 +99,144 @@ void Rocket::updateCom(PayloadBox& aPayloadBox)
 	comY = comMassYSum / (totalPayloadMass + totalStructuralMass + totalPropellantMass);
 }
 
-void Rocket::fly(double deltaT, Manager& theManager)
+bool Rocket::fly(double deltaT, Manager& theManager, Camera3D& camera, OrbitingViewer& orbit)
 {
-	
-	theManager.draw();
-	theManager.drawAxes();
 
-	theManager.impact.setColorHSV(300, 1, 1);
-	theManager.comicsans.setColorHSV(300, 1, .5);
-	std::string data = "Rocket " + label + " in flight";
-	theManager.drawText2d(data, theManager.impact, 10, 65, .5);
-	data = "Velocity = " + std::to_string(velocity);
-	theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
-	data = "Altitude = " + std::to_string(comY);
-	theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
-	data = "Time in stage = " + std::to_string(timeElapsedInStage);
-	theManager.drawText2d(data, theManager.comicsans, 10, 110, .15);
+		if (!flightStarted) {
+			flightStarted = true;
+			currEngineBox = theEngineBoxes.at(theEngineBoxesLabels[0]);
+			groundPositionY = comY;
+		}
 
-	// update velocity
-	updateVelocity();
-	// update Com of rocket
-	comY += velocity * deltaT;
+		theManager.draw();
+		theManager.drawAxes();
 
-	// update Com of all boxes in the rocket by the same amount
-	for (auto& currEngineBox : theEngineBoxes) {
-		currEngineBox.second->fly(deltaT,velocity);
-	}
-	// update Com of all boxes in the rocket by the same amount
-	for (auto& currPayloadBox : thePayloadBoxes) {
-		currPayloadBox.second->fly(deltaT, velocity);
-	}
-	
-	timeElapsedInStage += deltaT;
-	/*cout << "Current velocity = " << velocity << endl;*/
-	/*cout << "current Y increment = " << velocity * deltaT << endl;*/
+		theManager.impact.setColorHSV(300, 1, 1);
+		theManager.comicsans.setColorHSV(300, 1, 1);
+		std::string data = "Rocket " + label + " in flight";
+		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
+		data = "Velocity = " + std::to_string(velocity);
+		theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
+		data = "Altitude = " + std::to_string(comY);
+		theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
+		data = "Time in stage " + std::to_string(stageNumber) + " = " + std::to_string(timeElapsedInStage);
+		theManager.drawText2d(data, theManager.comicsans, 10, 110, .15);
 
-	// draw the box in new position
-	//theManager.draw();
-	//theManager.drawAxes();
-	FsSwapBuffers();
+		//EngineBox* currEngineBox = theEngineBoxes.begin()->second;
+
+		// update velocity
+		updateVelocity();
+		// update Com of rocket
+		comY += velocity * deltaT;
+
+
+
+		// update Com of all boxes in the rocket by the same amount
+		for (auto& currEngineBox : theEngineBoxes) {
+			currEngineBox.second->fly(deltaT, velocity);
+		}
+		// update Com of all boxes in the rocket by the same amount
+		for (auto& currPayloadBox : thePayloadBoxes) {
+			currPayloadBox.second->fly(deltaT, velocity);
+		}
+
+		// update camera position (must be after box position update)
+		/*orbit.focusY += velocity * deltaT;*/
+		orbit.focusY = comY;
+
+		timeElapsedInStage += deltaT;
+
+		bool proceedNextStage = false;
+		if (timeElapsedInStage > (currEngineBox->burnTime) && engineBoxFlightCounter+1 < theEngineBoxes.size() && !proceedNextStage) {
+			data = "Propellant from stage " + std::to_string(stageNumber) + " finished ";
+			theManager.drawText2d(data, theManager.comicsans, 10, 125, .15);
+			data = "Press N to go to next stage";
+			theManager.drawText2d(data, theManager.comicsans, 10, 140, .15);
+			FsPollDevice();
+			int key = FsInkey();
+			if (key == FSKEY_N) {
+				startNextStage();
+				proceedNextStage = true;
+			}
+
+		}
+		else if (timeElapsedInStage > (currEngineBox->burnTime) && engineBoxFlightCounter + 1 >= theEngineBoxes.size()) {
+			data = "Propellant from stage " + std::to_string(stageNumber) + " finished ";
+			theManager.drawText2d(data, theManager.comicsans, 10, 125, .15);
+			data = "Press N to go to return rocket to ground";
+			theManager.drawText2d(data, theManager.comicsans, 10, 140, .15);
+			FsPollDevice();
+			int key = FsInkey();
+			if (key == FSKEY_N) {
+				return !reuseRocket(orbit);
+			}
+		}
+		
+		/*cout << "Current velocity = " << velocity << endl;*/
+		/*cout << "current Y increment = " << velocity * deltaT << endl;*/
+
+
+		// multistage needs debugging, currently stops after 1 stage
+		// if elapsed time is past the burn time and if there is another engine box, wait to go into next stage
+		//bool proceedNextStage = false;
+		//if (timeElapsedInStage > (currEngineBox->burnTime) && theEngineBoxes.size() > 1 && !proceedNextStage) {
+
+		//	FsPollDevice();
+		//	int key = FsInkey();
+
+		//	while (key != FSKEY_N) {
+		//		data = "Propellant from stage " + std::to_string(stageNumber) + " finished ";
+		//		theManager.drawText2d(data, theManager.comicsans, 10, 125, .15);
+		//		data = "Press N to go to next stage";
+		//		theManager.drawText2d(data, theManager.comicsans, 10, 140, .15);
+
+		//		FsPollDevice();
+		//		key = FsInkey();
+		//	}
+		//	startNextStage(); // if start another stage, delete the previous engine box and use the new one
+		//	proceedNextStage = true;
+		//}
+
+
+		FsSwapBuffers();
+		return true;
 }
 
-void Rocket::startStage()
+void Rocket::startNextStage()
 {
-	theEngineBoxes.erase(theEngineBoxes.begin());
+	// move current engine box from theEngineBoxes to theUsedEngineBoxes (both unordered map)
+	theUsedEngineBoxes.insert({ currEngineBox->label , currEngineBox });
+	/*theEngineBoxes.erase(currEngineBox->label);*/
+
+	engineBoxFlightCounter++;
+	// set the next engine box as current
+	currEngineBox = theEngineBoxes.at(theEngineBoxesLabels[engineBoxFlightCounter]);
 	baselineVelocity = velocity;
 	/*begin = std::chrono::high_resolution_clock::now();*/
 	timeElapsedInStage = 0;
+	stageNumber++;
 
+}
+
+bool Rocket::reuseRocket(OrbitingViewer& orbit) {
+	double comYDiff = comY - groundPositionY;
+	// reset rocket settings
+	comY = groundPositionY;
+	resetRocket();
+
+
+	// update Com of all boxes in the rocket by the same amount
+	for (auto& currEngineBox : theEngineBoxes) {
+		currEngineBox.second->setComY(currEngineBox.second->comY - comYDiff);
+	}
+	// update Com of all boxes in the rocket by the same amount
+	for (auto& currPayloadBox : thePayloadBoxes) {
+		currPayloadBox.second->setComY(currPayloadBox.second->comY - comYDiff);
+	}
+	orbit.focusY = comY;
+	
+	return true;
+	
 }
 
 void Rocket::updateTotalPropellantMass(EngineBox& anEngineBox)
@@ -190,7 +280,7 @@ PayloadBox* Rocket::getPayloadBox(std::string& label)
 	return nullptr;
 }
 
-EngineBox* Rocket::makeEngineBox(Manager &theManager)
+EngineBox* Rocket::makeEngineBox(Manager& theManager)
 {
 	double tempDim = 10;
 	double tempHue = 0;
@@ -212,6 +302,7 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 	EngineBox* newEngineBox = new EngineBox(label, modelX, modelY, tempDim, tempDim, tempHue,
 		tempThrust, tempPropellantMassFlow);
 	addEngineBox(*newEngineBox);
+	theEngineBoxesLabels.push_back(label);
 	newEngineBox->updateDependentParams(); // need this because somehow burn time not calculated when EngineBox constructed -> revisit later
 
 	cout << "Setting width" << endl;
@@ -221,7 +312,7 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(300, 1, .5);
+		theManager.comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Engine Box: selecting width";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
 		data = "Use MouseWheel to set width. LMB to confirm.";
@@ -240,10 +331,9 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 			newEngineBox->setWidth(min(newEngineBox->getWidth() + 4, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
 			newEngineBox->setWidth(max(newEngineBox->getWidth() - 4, double(.05))); //add min
-		cout << "setting width to " << newEngineBox->getWidth() << endl;
+		/*cout << "setting width to " << newEngineBox->getWidth() << endl;*/
 		newEngineBox->updateMass(); // update structural and propellant mass according to dimension
 
-		
 		FsSwapBuffers();
 
 		FsPollDevice();
@@ -261,10 +351,10 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(300, 1, .5);
+		theManager.comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Engine Box: selecting height";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
-		data = "Use MouseWheel to set width. LMB to confirm.";
+		data = "Use MouseWheel to set height. LMB to confirm.";
 		theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
 		data = "Height = " + std::to_string(newEngineBox->getHeight());
 		theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
@@ -276,7 +366,7 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 			newEngineBox->setHeight(min(newEngineBox->getHeight() + 4, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
 			newEngineBox->setHeight(max(newEngineBox->getHeight() - 4, double(1))); //add min
-		cout << "setting height to " << newEngineBox->getHeight() << endl;
+		/*cout << "setting height to " << newEngineBox->getHeight() << endl;*/
 		newEngineBox->updateMass(); // update structural and propellant mass according to dimension
 
 		FsSwapBuffers();
@@ -298,10 +388,10 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(newEngineBox->getHue(), 1, .5);
+		theManager.comicsans.setColorHSV(newEngineBox->getHue(), 1, 1);
 		std::string data = "Adding Engine Box: selecting color";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
-		data = "Use MouseWheel to set width. LMB to confirm.";
+		data = "Use MouseWheel to set color. LMB to confirm.";
 		theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
 		data = "Hue = " + std::to_string(newEngineBox->getHue());
 		theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
@@ -330,10 +420,10 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(300, 1, .5);
+		theManager.comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Engine Box: selecting thrust";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
-		data = "Use MouseWheel to set width. LMB to confirm.";
+		data = "Use MouseWheel to set thrust. LMB to confirm.";
 		theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
 		data = "Thrust = " + std::to_string(newEngineBox->getThrust());
 		theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
@@ -368,7 +458,7 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(300, 1, .5);
+		theManager.comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Engine Box: selecting propellant mass flow";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
 		data = "Use MouseWheel to set width. LMB to confirm.";
@@ -382,7 +472,7 @@ EngineBox* Rocket::makeEngineBox(Manager &theManager)
 		if (key == FSKEY_WHEELUP)
 			newEngineBox->setPropellantMassFlow(min((newEngineBox->getPropellantMassFlow() + 10), 100.));
 		if (key == FSKEY_WHEELDOWN)
-			newEngineBox->setPropellantMassFlow(max((newEngineBox->getPropellantMassFlow() + 10), 10.));
+			newEngineBox->setPropellantMassFlow(max((newEngineBox->getPropellantMassFlow() - 10), 10.));
 
 		// could change to better visual feedback later 
 		/*cout << "current propellant mass flow = " << newEngineBox->getPropellantMassFlow() << endl;*/
@@ -433,7 +523,7 @@ PayloadBox* Rocket::makePayloadBox(Manager& theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(300, 1, .5);
+		theManager.comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Payload Box: selecting width";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
 		data = "Use MouseWheel to set width. LMB to confirm.";
@@ -451,7 +541,7 @@ PayloadBox* Rocket::makePayloadBox(Manager& theManager)
 			newPayloadBox->setWidth(min(newPayloadBox->getWidth() + 4, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
 			newPayloadBox->setWidth(max(newPayloadBox->getWidth() - 4, double(.05))); //add min
-		cout << "setting width to " << newPayloadBox->getWidth() << endl;
+		/*cout << "setting width to " << newPayloadBox->getWidth() << endl;*/
 
 		newPayloadBox->updateMass(); // update structural and propellant mass according to dimension
 
@@ -472,10 +562,10 @@ PayloadBox* Rocket::makePayloadBox(Manager& theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(300, 1, .5);
+		theManager.comicsans.setColorHSV(300, 1, 1);
 		std::string data = "Adding Payload Box: selecting height";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
-		data = "Use MouseWheel to set width. LMB to confirm.";
+		data = "Use MouseWheel to set height. LMB to confirm.";
 		theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
 		data = "Height = " + std::to_string(newPayloadBox->getHeight());
 		theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
@@ -487,7 +577,7 @@ PayloadBox* Rocket::makePayloadBox(Manager& theManager)
 			newPayloadBox->setHeight(min(newPayloadBox->getHeight() + 4, double(100))); //add max
 		else if (key == FSKEY_WHEELDOWN)
 			newPayloadBox->setHeight(max(newPayloadBox->getHeight() - 4, double(1))); //add min
-		cout << "setting height to " << newPayloadBox->getHeight() << endl;
+		/*cout << "setting height to " << newPayloadBox->getHeight() << endl;*/
 
 		newPayloadBox->updateMass(); // update structural and propellant mass according to dimension
 
@@ -510,10 +600,10 @@ PayloadBox* Rocket::makePayloadBox(Manager& theManager)
 		theManager.drawAxes();
 
 		theManager.impact.setColorHSV(300, 1, 1);
-		theManager.comicsans.setColorHSV(newPayloadBox->getHue(), 1, .5);
+		theManager.comicsans.setColorHSV(newPayloadBox->getHue(), 1, 1);
 		std::string data = "Adding Payload Box: selecting color";
 		theManager.drawText2d(data, theManager.impact, 10, 65, .5);
-		data = "Use MouseWheel to set width. LMB to confirm.";
+		data = "Use MouseWheel to set color. LMB to confirm.";
 		theManager.drawText2d(data, theManager.comicsans, 10, 80, .15);
 		data = "Hue = " + std::to_string(newPayloadBox->getHue());
 		theManager.drawText2d(data, theManager.comicsans, 10, 95, .15);
@@ -545,6 +635,16 @@ PayloadBox* Rocket::makePayloadBox(Manager& theManager)
 void Rocket::deleteBox(Box* theBox)
 {
 	delete theBox;
+}
+
+void Rocket::resetRocket()
+{
+	engineBoxFlightCounter = 0;
+	stageNumber = 1;
+	timeElapsedInStage = 0;
+	baselineVelocity = 0;
+	velocity = 0;
+	currEngineBox = nullptr;
 }
 
 

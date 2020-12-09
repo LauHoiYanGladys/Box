@@ -154,6 +154,7 @@ private:
 	double propellantMass, structuralMass, maxPropellantMass, propellantFraction;
 	double thrust, propellantMassFlow, effectiveExhaustVelocity;
 	double burnTime;
+	friend class Rocket;
 public:
 	EngineBox(std::string& theLabel, double& theComX, double& theComY,
 		double& theXDim, double& theYDim, double& theHue, 
@@ -178,7 +179,7 @@ public:
 	double getBurnTime() { return burnTime; };
 
 	// initial settings
-	void setThrust(double theThrust) { thrust = theThrust; std::cout << "setting thrust to " << thrust << std::endl; updateDependentParams(); };
+	void setThrust(double theThrust) { thrust = theThrust; /*std::cout << "setting thrust to " << thrust << std::endl;*/ updateDependentParams(); };
 	void setPropellantMassFlow(double thePropellantMassFlow) { propellantMassFlow = thePropellantMassFlow; updateDependentParams();};
 
 	double getThrust() { return thrust; };
@@ -211,6 +212,7 @@ public:
 class PayloadBox : public Box {
 private:
 	double payloadMass;
+	friend class Rocket;
 public:
 	PayloadBox(std::string& theLabel, double& theComX, double& theComY,
 		double& theXDim, double& theYDim, double& theHue):
