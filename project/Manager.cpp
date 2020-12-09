@@ -49,6 +49,7 @@ Manager::Manager()
 
 	theMode = editMode;
 
+	skyOffset = 0;
 
 	currRocket = nullptr;
 	deltaT = 0.1;
@@ -253,15 +254,16 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 		orbit.p += Camera3D::PI / 180.0;
 	if (FsGetKeyState(FSKEY_DOWN))
 		orbit.p -= Camera3D::PI / 180.0;
-	if (FsGetKeyState(FSKEY_F) && orbit.dist > 2) {
+	if (FsGetKeyState(FSKEY_PLUS) && orbit.dist > 5) {
 		orbit.dist /= 1.05;
 		viewScale *= 1.05;
+		camera.farZ /= 1.05;
 	}
 
-	if (FsGetKeyState(FSKEY_B) && orbit.dist < camera.farZ * .8) {
+	if (FsGetKeyState(FSKEY_MINUS) && orbit.dist < 2000) {
 		orbit.dist *= 1.05;
 		viewScale /= 1.05;
-
+		camera.farZ *= 1.05;
 	}
 
 	if (FsGetKeyState(FSKEY_1))
@@ -337,11 +339,11 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	case FSKEY_Y: load();
 
 		break;
-	case FSKEY_Q: addBox(camera, orbit);
-		break;
-	case FSKEY_W: editBox();
+	//case FSKEY_Q: addBox(camera, orbit);
+		//break;
+	//case FSKEY_W: editBox(camera,orbit);
 
-		break;
+		//break;
 
 	case FSKEY_Q: 
 		if (theMode == editMode)
@@ -490,7 +492,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	
 	// Set up 2D drawing (commented out because of lagging)
-	
+	/*
 	impact.setColorHSV(300, 1, 1);
 	drawText2d("I'm Orbiting!",impact, 10, 60, .4);
 
@@ -506,7 +508,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	data = "Adjust Amount = " + std::to_string(adjustAmt);
 	drawText2d(data, comicsans, 10, 120, .3);
-
+	*/
 	/*ComicSansFont comicsans;
 	comicsans.setColorHSV(300, 1, 1);
 	ImpactFont impact;*/
@@ -1079,9 +1081,9 @@ else
 
 void Manager::drawGround()
 {
-	int max = 500;
+	int max = 5000;
 	int min = -max;
-	int steps = 6;
+	int steps = 7;
 	double stepsize = (max - min) / steps;
 
 	for (int i = 0; i < steps; i++)
@@ -1120,39 +1122,97 @@ void Manager::drawGround()
 
 void Manager::drawStarry()
 {
-	int max = 500;
-	int min = -max;
-	int steps = 10;
-	double stepsize = (max - min) / steps;
+	
 
-	for (int i = 0; i < steps; i++)
+	int starSkyMax = camera->farZ;
+	skyOffset = camera->y;
+	int minY = -starSkyMax;
+	int steps = 40;
+	double stepsize = (starSkyMax - minY) / steps;
+	double dist = -1*camera->farZ / 3;
+	
+	for (int k = 0; k < 4; k++)
 	{
-		for (int j = 0; j < steps; j++)
+		dist *= -1;
+		if (k < 2)
 		{
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-			glColor4d(1.0, 1.0, 1.0, 1.0);
+			for (int i = 0; i < steps; i++)
+			{
+				for (int j = 0; j < steps; j++)
+				{
+					double xVal1 = minY + stepsize * j;
+					double xVal2 = minY + stepsize * (j + 1);
+					double yVal1 = skyOffset + minY + stepsize * i;
+					double yVal2 = skyOffset + minY + stepsize * (i + 1);
+					double zVal = dist;
+					glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+					glColor4d(1.0, 1.0, 1.0, 1.0);
 
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, texId[1]);
-			glPolygonOffset(1, 1);
-			glBegin(GL_QUADS);
+					glEnable(GL_TEXTURE_2D);
+					glBindTexture(GL_TEXTURE_2D, texId[1]);
+					glPolygonOffset(1, 1);
+					glBegin(GL_QUADS);
 
-			glTexCoord2d(0.0, 0.0);
-			glVertex3d(min + stepsize * j, min + stepsize * i, -100);
+					glTexCoord2d(0.0, 0.0);
+					glVertex3d(xVal1, yVal1, zVal);
 
-			glTexCoord2d(1.0, 0.0);
-			glVertex3d(min + stepsize * (j + 1), min + stepsize * i, -100);
+					glTexCoord2d(1.0, 0.0);
+					glVertex3d(xVal2, yVal1, zVal);
 
-			glTexCoord2d(1.0, 1.0);
-			glVertex3d(min + stepsize * (j + 1), min + stepsize * (i + 1), -100);
+					glTexCoord2d(1.0, 1.0);
+					glVertex3d(xVal2, yVal2, zVal);
 
-			glTexCoord2d(0.0, 1.0);
-			glVertex3d(min + stepsize * j, min + stepsize * (i + 1), -100);
+					glTexCoord2d(0.0, 1.0);
+					glVertex3d(xVal1, yVal2, zVal);
 
-			glEnd();
-			glDisable(GL_BLEND);
-			glDisable(GL_TEXTURE_2D);
+					glEnd();
+					glDisable(GL_BLEND);
+					glDisable(GL_TEXTURE_2D);
+				}
+			}
 		}
+		else
+		{
+			for (int i = 0; i < steps; i++)
+			{
+				for (int j = 0; j < steps; j++)
+				{
+					double xVal1 = minY + stepsize * j;
+					double xVal2 = minY + stepsize * (j + 1);
+					double yVal1 = skyOffset + minY + stepsize * i;
+					double yVal2 = skyOffset + minY + stepsize * (i + 1);
+					double zVal = dist;
+					glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+					glColor4d(1.0, 1.0, 1.0, 1.0);
+
+					glEnable(GL_TEXTURE_2D);
+					glBindTexture(GL_TEXTURE_2D, texId[1]);
+					glPolygonOffset(1, 1);
+					glBegin(GL_QUADS);
+
+					glTexCoord2d(0.0, 0.0);
+					//glVertex3d(xVal1, yVal1, zVal);
+					glVertex3d(zVal, yVal1, xVal1);
+
+					glTexCoord2d(1.0, 0.0);
+					//glVertex3d(xVal2, yVal1, zVal);
+					glVertex3d(zVal, yVal1, xVal2);
+
+					glTexCoord2d(1.0, 1.0);
+					//glVertex3d(xVal2, yVal2, zVal);
+					glVertex3d(zVal, yVal2, xVal2);
+
+					glTexCoord2d(0.0, 1.0);
+					//glVertex3d(xVal1, yVal2, zVal);
+					glVertex3d(zVal, yVal2, xVal1);
+
+					glEnd();
+					glDisable(GL_BLEND);
+					glDisable(GL_TEXTURE_2D);
+				}
+			}
+		}
+		
 	}
 
 
@@ -1853,7 +1913,9 @@ void Manager::drawBasicText(Camera3D& camera, OrbitingViewer& orbit)
 		data = "Rocket Launch Mode";
 	else if (theMode == editMode)
 		data = "Box Editing Mode";
-
+	
+	//drawText2d("FarZ = " + std::to_string(camera.farZ), impact, WIN_WIDTH / 2, 80, .6);
+	
 	drawText2d(data, impact, 10, 60, .4);
 	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
 	comicsans.setColorHSV(300, 1, 1);

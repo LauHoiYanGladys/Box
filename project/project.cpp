@@ -27,7 +27,7 @@ int main(void) {
 	camera.z = 10.0; // look at point 0,0,10
 
 	camera.y = 5.0;
-	camera.farZ = 400.0;
+	camera.farZ = 1200.0;
 	orbit.p -= 5*Camera3D::PI / 180.0;
 	orbit.h += 2 * Camera3D::PI / 180.0;
 	//initialize fonts (after FsOpenWindow)

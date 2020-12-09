@@ -20,7 +20,7 @@ void Camera3D::initialize(void)
 	
 	// set depth range
 	nearZ = 0.1;
-	farZ = 400.0;
+	farZ = 10000.0;
 }
 
 void Camera3D::setUpCameraProjection(void)
@@ -36,6 +36,7 @@ void Camera3D::setUpCameraProjection(void)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(fov * 180.0 / PI, aspect, nearZ, farZ);
+	
 }
 
 void Camera3D::setUpCameraTransformation(void)

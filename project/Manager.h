@@ -75,6 +75,8 @@ private:
 	vector<string> rocketLabels;
 	int rocketCounter;
 
+	int skyOffset;
+
 public:
 	//int key;
 	//int mouseEvent, leftButton, middleButton, rightButton;
