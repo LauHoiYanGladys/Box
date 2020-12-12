@@ -76,6 +76,7 @@ private:
 	int rocketCounter;
 
 	int skyOffset;
+	double oldX, oldY;
 
 public:
 	//int key;
@@ -189,7 +190,7 @@ public:
 	void draw();
 	void getModelCoords(double& modelX, double& modelY, double screenX, double screenY);
 	void getScreenCoords(double modelX, double modelY, double& screenX, double& screenY);
-	void snapFaceOn(OrbitingViewer& orbit, Camera3D& camera);
+	//void snapFaceOn(OrbitingViewer& orbit, Camera3D& camera);
 	void updateModelCom(Box& newBox);
 	void storeState(std::unordered_map<std::string, Box> theBoxes);
 	void restoreState();
@@ -202,6 +203,8 @@ public:
 
 	void waitForSelection(string toPrint);
 	void drawBasicText(Camera3D& camera, OrbitingViewer& orbit);
+
+	bool isIntersectingGround(Box& aBox);
 };
 
 

@@ -98,52 +98,43 @@ bool Manager::isIntersecting(Box& firstBox, Box& secondBox, overlappingDimension
 
 		}
 	}
+
 	cout << "Not Intersecting" << endl;
 	return false;
 
 }
+
 
 void Manager::switchCurrentRocket()
 {
 	if (theRockets.size() > 1)
 		// set previous current rocket's current status as false
 		currRocket->isCurrent = false;
-		// set new current rocket
-		int index = (rocketCounter + 1) % (theRockets.size());
-		currRocket = theRockets.at(rocketLabels[index]);
-		currRocket->isCurrent = true;
-		rocketCounter++;
+	// set new current rocket
+	int index = (rocketCounter + 1) % (theRockets.size());
+	currRocket = theRockets.at(rocketLabels[index]);
+	currRocket->isCurrent = true;
+	rocketCounter++;
 }
 
 void Manager::showMenu()
 {
 	cout << "Use these keys on the screen:" << endl;
-	cout << "    L : load file (this does not clear all previous data)" << endl;
-	cout << "    S : save file" << endl;
-	cout << "    C : clear all data (with confirmation)" << endl;
-	cout << endl;
-	cout << "    E : toggle edit mode on/off (allows moving boxes)" << endl;
-	cout << "         press DEL when box is highlighted to delete it" << endl;
+	cout << "    E : toggle between modes" << endl;
+	cout << "        press DEL when box is highlighted to delete it" << endl;
 	cout << "    U : undo last box move (if still in edit mode)" << endl;
 	cout << endl;
-	//cout << "    A : toggle add mode on/off (allows adding nodes along slide)" << endl;
-	//cout << "         click on highlighted spline node to insert guide node" << endl;
-	//cout << endl;
-	//cout << "    N : toggle guide nodes on/off" << endl;
-	//cout << "    P : cycle through 8 distinct slider colors" << endl;
-	//cout << "    O : make slider thicker" << endl;
-	//cout << "    I : make slide thinner" << endl;
+
 	cout << endl;
 	cout << "Simulation" << endl;
 	cout << "    Q : add a box to the model" << endl;
-	cout << "    W : remove a box from the model" << endl;
+	cout << "    W : start editing a selected box" << endl;
+	cout << "    Delete : remove a selected box from the model" << endl;
 	cout << "    SPACE : turn gravity on/off" << endl;
 	cout << endl;
 	cout << "Panning and Zooming" << endl;
-	cout << "    Use arrow keys on screen to pan model up/down/left/right" << endl;
+	cout << "    Use arrow keys and JKLI on screen to pan and orbit" << endl;
 	cout << "    Use +/- to zoom into (bigger) and out of (smaller), respectively" << endl;
-	cout << "    Z : see all boxes face-on" << endl;
-	cout << "        CTRL+mouse to pan, SHIFT+mouse to zoom or use mouse wheel" << endl;
 	cout << endl;
 }
 
@@ -180,19 +171,26 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	}
 
 	// moving boxes
-	if (leftButton && theMode == editMode && currBox != nullptr && FsGetKeyState(FSKEY_M)) {
+	if (leftButton && theMode == editMode && currBox != nullptr) {
+		//bool stateStored = false;
+		//if (!stateStored) {
+		//	// remember the current state before making changes
+		//	storeState(theBoxes);
+		//	stateStored = true;
+		//}
 		boxIsMoving = true;  // this will prevent searching for a new node
+		// record change in position
+		double oldX = currBox->getComX();
+		double oldY = currBox->getComY();
 
 		// if current box is a selected box and more than 1 selected box, 
 		// move all selected boxes by the same amount
 		if (selectedBoxes.find(currBox->getLabel()) != selectedBoxes.end() && selectedBoxes.size() > 1) {
 			getModelCoords(modelX, modelY, locX, locY);
-			// record change in position
-			double oldX = currBox->getComX();
-			double oldY = currBox->getComY();
+
 			// set current box position
-			currBox->setComX(modelX);
-			currBox->setComY(modelY);
+			currBox->setXY(modelX, modelY);
+			assignYDistanceFromBelow(*currBox);
 			// set position of other selected boxes
 			for (auto& aSelectedBox : selectedBoxes) {
 				if (aSelectedBox.first.compare(currBox->getLabel()) != 0) {
@@ -200,15 +198,39 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 					double aSelectedBoxOldY = aSelectedBox.second->getComY();
 					aSelectedBox.second->setComX(aSelectedBoxOldX + modelX - oldX);
 					aSelectedBox.second->setComY(aSelectedBoxOldY + modelY - oldY);
+					assignYDistanceFromBelow(*(aSelectedBox.second));
 				}
 			}
 		}
 		// else just move the current Box 
 		else {
 			getModelCoords(modelX, modelY, locX, locY);
-			// set current box position
-			currBox->setComX(modelX);
-			currBox->setComY(modelY);
+			currBox->setXY(modelX, modelY);
+			assignYDistanceFromBelow(*currBox);
+			//bool deletedFlag = false;
+			////mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+			//if (mouseEvent == FSMOUSEEVENT_LBUTTONUP) {
+			//	if (!deletedFlag) {
+			//		if (!isValidLoc(*currBox)) {
+			//			deleteBox(*currBox);
+			//			deletedFlag = true;
+			//		}
+			//		else {
+			//			assignYDistanceFromBelow(*currBox);
+
+			//		}
+			//	}
+			//}
+
+			//if (isValidLoc(*currBox)) {
+			//	// set current box position
+			//	currBox->setComX(modelX);
+			//	currBox->setComY(modelY);
+			//	assignYDistanceFromBelow(*currBox);
+			//}
+			//else {
+			//	restoreState();
+			//}
 		}
 
 
@@ -244,7 +266,19 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	//}
 	if (key == FSKEY_U)
 		restoreState();
-
+	if (key == FSKEY_DEL) {
+		storeState(theBoxes);
+		if (!selectedBoxes.empty()) {
+			auto it = selectedBoxes.begin();
+			while (it != selectedBoxes.end()) {
+				Box* tempPtr = it->second;
+				it = selectedBoxes.erase(it);
+				deleteBox(*tempPtr);
+			}
+		}
+		
+	}
+		
 	if (FsGetKeyState(FSKEY_LEFT)) {
 		orbit.h += Camera3D::PI / 180.0;
 	}
@@ -293,8 +327,8 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	}
 
 
-	if (key == FSKEY_Z)
-		snapFaceOn(orbit, camera);
+	//if (key == FSKEY_Z)
+	//	snapFaceOn(orbit, camera);
 
 	orbit.setUpCamera(camera);
 
@@ -339,25 +373,25 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	case FSKEY_Y: load();
 
 		break;
-	//case FSKEY_Q: addBox(camera, orbit);
-		//break;
-	//case FSKEY_W: editBox(camera,orbit);
+		//case FSKEY_Q: addBox(camera, orbit);
+			//break;
+		//case FSKEY_W: editBox(camera,orbit);
 
-		//break;
+			//break;
 
-	case FSKEY_Q: 
+	case FSKEY_Q:
 		if (theMode == editMode)
 			addBox(camera, orbit);
-		break; 
-	case FSKEY_W: 
+		break;
+	case FSKEY_W:
 		if (theMode == editMode)
 			editBox(camera, orbit);
-		break; 
-	/*case FSKEY_Q: addBox(camera, orbit); 
-		break; 
-	case FSKEY_W: editBox(camera, orbit);
-		break;*/
-	case FSKEY_C: 
+		break;
+		/*case FSKEY_Q: addBox(camera, orbit);
+			break;
+		case FSKEY_W: editBox(camera, orbit);
+			break;*/
+	case FSKEY_C:
 		if (theMode == rocketFlyMode)
 			switchCurrentRocket();
 		break;
@@ -390,7 +424,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	// Gladys
 	// selecting or deselecting boxes
-	if (theMode == editMode && mouseEvent == FSMOUSEEVENT_LBUTTONDOWN && currBox != nullptr && !FsGetKeyState(FSKEY_M)) {
+	if (theMode == editMode && mouseEvent == FSMOUSEEVENT_LBUTTONDOWN && currBox != nullptr && FsGetKeyState(FSKEY_CTRL)) {
 
 		// if not already selected, add to selected
 		if (selectedBoxes.find(currBox->getLabel()) == selectedBoxes.end()) {
@@ -421,8 +455,29 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	}
 
 	if (theMode == rocketBuildMode && FsGetKeyState(FSKEY_T)) {
-		if (buildRocket())
-			cout << "Rocket " << currRocket->label << " built!" << endl;
+		bool buildingDone = false;
+		while (!buildingDone) {
+			if (buildRocket()) {
+				cout << "Rocket " << currRocket->label << " built!" << endl;
+				buildingDone = true;
+			}
+			else {
+				char userChoice;
+				cout << "No rocket built" << endl;
+				cout << "Build again? (Y/N)" << endl;
+				cin >> userChoice;
+				if (userChoice == 'Y' || userChoice == 'y') {
+					cout << "Proceed to building rocket" << endl;
+				}
+				else if (userChoice == 'N' || userChoice == 'n') {
+					cout << "Rocket building stopped. Click on the application window to continue." << endl;
+					buildingDone = true;
+				}
+
+			}
+
+		}
+
 
 	}
 
@@ -445,12 +500,13 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 	}
 
 	// if in rocket launch mode
-	if (theMode == rocketFlyMode && key == FSKEY_G && currRocket != nullptr && !currRocket->flightEnded) {
+	if (theMode == rocketFlyMode && key == FSKEY_G && currRocket != nullptr) {
 		if (currRocket->thePayloadBoxes.empty())
 			cout << "At least 1 payload box is needed to launch. Currently none" << endl;
 		if (currRocket->theEngineBoxes.empty())
 			cout << "At least 1 engine box is needed to launch. Currently none" << endl;
 		else {
+			currRocket->flightStarted = true;
 			// keeps flying until return to ground, make the boxes of the current rocket move as they should
 			while (theMode == rocketFlyMode && currRocket->fly(deltaT, *this, camera, orbit)) {
 				// camera follows rocket in the y direction during flight (this is moved to Rocket.fly)
@@ -490,7 +546,7 @@ bool Manager::manage(Camera3D& camera, OrbitingViewer& orbit)
 
 	drawBasicText(camera, orbit);
 
-	
+
 	// Set up 2D drawing (commented out because of lagging)
 	/*
 	impact.setColorHSV(300, 1, 1);
@@ -725,22 +781,26 @@ void Manager::readFile(ifstream& inFile)
 
 void Manager::editBox(Camera3D& camera, OrbitingViewer& orbit)
 {
-	drawBasicText(camera, orbit);
-	if (theBoxes.empty()) {
-		cout << "No boxes to edit" << endl;
-		return;
-	}
-	else {
-		/*FsPollDevice();
-		int key = FsInkey();
-		int mouseEvent, leftButton, middleButton, rightButton;
-		int locX, locY;
-		double modelX = 0, modelY = 0;
-		mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
-		getModelCoords(modelX, modelY, locX, locY);*/
+	if (selectedBoxes.size() == 1) {
+		// remember the current state before making changes
+		boxStates.push_back(theBoxes);
 
-		//while (!selectedBoxes.size() != 1); // wait for the number of selected boxes to be 1
-			
+		drawBasicText(camera, orbit);
+		//if (theBoxes.empty()) {
+		//	cout << "No boxes to edit" << endl;
+		//	return;
+		//}
+
+			/*FsPollDevice();
+			int key = FsInkey();
+			int mouseEvent, leftButton, middleButton, rightButton;
+			int locX, locY;
+			double modelX = 0, modelY = 0;
+			mouseEvent = FsGetMouseEvent(leftButton, middleButton, rightButton, locX, locY);
+			getModelCoords(modelX, modelY, locX, locY);*/
+
+			//while (!selectedBoxes.size() != 1); // wait for the number of selected boxes to be 1
+
 		Box* toEdit = selectedBoxes.begin()->second;
 		/*Box* toEdit = findBox(modelX, modelY, 10, normal);
 		while (toEdit == nullptr)
@@ -756,15 +816,16 @@ void Manager::editBox(Camera3D& camera, OrbitingViewer& orbit)
 				if (toEdit == nullptr)
 					cout << "nullptr" << endl;
 			}
-
-
 		}*/
-		editBox(*toEdit,camera,orbit);
+		editBox(*toEdit, camera, orbit);
 		assignYDistanceFromBelow(*toEdit);
 		return;
+
 	}
-
-
+	else {
+		cout << "No boxes to edit" << endl;
+		return;
+	}
 }
 
 void Manager::editBox(Box& toEdit, Camera3D& camera, OrbitingViewer& orbit)
@@ -819,7 +880,7 @@ void Manager::editBox(Box& toEdit, Camera3D& camera, OrbitingViewer& orbit)
 		drawText2d(data, comicsans, 10, 80, .15);
 		data = "Height = " + std::to_string(toEdit.getHeight());
 		drawText2d(data, comicsans, 10, 95, .15);
-		
+
 		//Set Height
 		FsPollDevice();
 		key = FsInkey();
@@ -889,11 +950,17 @@ void Manager::addBox(Camera3D& camera, OrbitingViewer& orbit)
 {
 
 
-	// remember the current state before making changes
-	boxStates.push_back(theBoxes);
-	comicsans.setColorHSV(300, 1, 1);
 
+	comicsans.setColorHSV(300, 1, 1);
+	bool stateStored = false;
 	bool deletedFlag = false;
+
+	// remember the current state before making changes
+	if (!stateStored) {
+		boxStates.push_back(theBoxes);
+		stateStored = true;
+	}
+
 
 	FsPollDevice();
 	int key = FsInkey();
@@ -1122,15 +1189,15 @@ void Manager::drawGround()
 
 void Manager::drawStarry()
 {
-	
+
 
 	int starSkyMax = camera->farZ;
 	skyOffset = camera->y;
 	int minY = -starSkyMax;
 	int steps = 40;
 	double stepsize = (starSkyMax - minY) / steps;
-	double dist = -1*camera->farZ / 3;
-	
+	double dist = -1 * camera->farZ / 3;
+
 	for (int k = 0; k < 4; k++)
 	{
 		dist *= -1;
@@ -1212,7 +1279,7 @@ void Manager::drawStarry()
 				}
 			}
 		}
-		
+
 	}
 
 
@@ -1244,6 +1311,10 @@ void Manager::drawStarry()
 //
 bool Manager::deleteBox(Box& toDelete)
 {
+	// deselect before erasing
+	if (selectedBoxes.find(toDelete.getLabel()) != selectedBoxes.end()) {
+		selectedBoxes.erase(toDelete.getLabel());
+	}
 	int val = theBoxes.erase(toDelete.getLabel());
 	if (val == 0)
 		return false;
@@ -1310,6 +1381,8 @@ void Manager::move(Box aBox)
 
 bool Manager::isValidLoc(Box& box1)
 {
+	if (isIntersectingGround(box1))
+		return false;
 	for (auto& box2 : theBoxes)
 	{
 		if (box1.getLabel().compare(box2.first) == 0)
@@ -1667,11 +1740,11 @@ void Manager::getScreenCoords(double modelX, double modelY, double& screenX, dou
 
 }
 
-void Manager::snapFaceOn(OrbitingViewer& orbit, Camera3D& camera)
-{
-	orbit.initialize();
-	orbit.setUpCamera(camera);
-}
+//void Manager::snapFaceOn(OrbitingViewer& orbit, Camera3D& camera)
+//{
+//	orbit.initialize();
+//	orbit.setUpCamera(camera);
+//}
 
 void Manager::updateModelCom(Box& newBox)
 {
@@ -1685,12 +1758,14 @@ void Manager::storeState(std::unordered_map<std::string, Box> theBoxes) {
 	if (boxStates.size() == 5)
 		boxStates.erase(boxStates.begin());
 	boxStates.push_back(theBoxes);
+	cout << "box state stored" << endl;
 }
 
 void Manager::restoreState() {
 	if (!boxStates.empty()) {
 		theBoxes = boxStates.back();
 		boxStates.pop_back();
+		cout << "restoring boxes" << endl;
 	}
 
 
@@ -1913,9 +1988,9 @@ void Manager::drawBasicText(Camera3D& camera, OrbitingViewer& orbit)
 		data = "Rocket Launch Mode";
 	else if (theMode == editMode)
 		data = "Box Editing Mode";
-	
+
 	//drawText2d("FarZ = " + std::to_string(camera.farZ), impact, WIN_WIDTH / 2, 80, .6);
-	
+
 	drawText2d(data, impact, 10, 60, .4);
 	data = "X=" + std::to_string(camera.x) + " Y=" + std::to_string(camera.y) + " Z=" + std::to_string(camera.z);
 	comicsans.setColorHSV(300, 1, 1);
@@ -1927,12 +2002,12 @@ void Manager::drawBasicText(Camera3D& camera, OrbitingViewer& orbit)
 	drawText2d(data, comicsans, 10, 95, .15);
 
 	// mode dependent display
-	if (theMode == rocketBuildMode){
+	if (theMode == rocketBuildMode) {
 		data = "Press T to start building rocket";
 		drawText2d(data, comicsans, 10, 110, .15);
 	}
 	else if (theMode == rocketFlyMode) {
-		
+
 		if (currRocket != nullptr) {
 			data = "Press G to launch rocket";
 			drawText2d(data, comicsans, 10, 110, .15);
@@ -1947,25 +2022,31 @@ void Manager::drawBasicText(Camera3D& camera, OrbitingViewer& orbit)
 			data = "No current rocket";
 			drawText2d(data, comicsans, 10, 140, .15);
 		}
-			
+
 	}
 	else if (theMode == viewMode) {
 		data = "Use arrow keys and JKLI keys to view 3D model";
 		drawText2d(data, comicsans, 10, 110, .15);
+		data = "Use + and - keys to zoom";
+		drawText2d(data, comicsans, 10, 125, .15);
 	}
 	else if (theMode == editMode) {
-		data = "Press Q to add box, W to edit box";
+		data = "Press Q to add box, W to edit selected box, U to undo";
 		drawText2d(data, comicsans, 10, 110, .15);
-		data = "Hold down M and drag with mouse to move";
+		data = "Control key + LMB to select boxes";
 		drawText2d(data, comicsans, 10, 125, .15);
-		data = "LMB to select multiple to move";
+		data = "Hold down left mouse button to drag selected box";
 		drawText2d(data, comicsans, 10, 140, .15);
-		if (!selectedBoxes.size() != 1 ) {
+		data = "Press Delete to delete selected box";
+		drawText2d(data, comicsans, 10, 155, .15);
+		data = "Press Space bar to toggle gravity on and off";
+		drawText2d(data, comicsans, 10, 170, .15);
+		if (selectedBoxes.size() != 1) {
 			data = "Select only 1 box to edit";
-			drawText2d(data, comicsans, 10, 155, .15);
-		}	
+			drawText2d(data, comicsans, 10, 185, .15);
+		}
 	}
-	
+
 
 
 	/*ComicSansFont comicsans;
@@ -1994,6 +2075,16 @@ void Manager::drawBasicText(Camera3D& camera, OrbitingViewer& orbit)
 		comicsans.drawText(data, 10, 95, .15);
 
 	}*/
+}
+
+bool Manager::isIntersectingGround(Box& aBox)
+{
+	// check whether a box is intersecting with ground
+	if (aBox.getMinY() < 0) {
+
+		return true;
+	}
+	return false;
 }
 
 //void Manager::launchRocket()

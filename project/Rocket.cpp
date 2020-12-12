@@ -24,6 +24,7 @@ void Rocket::addEngineBox(EngineBox& anEngineBox)
 	updateTotalPropellantMass(anEngineBox);
 	updateTotalStructuralMass(anEngineBox);
 	updateInitialMass(anEngineBox);
+	currEngineBox = &anEngineBox;
 }
 
 void Rocket::addPayloadBox(PayloadBox& aPayloadBox)
@@ -37,7 +38,7 @@ void Rocket::addPayloadBox(PayloadBox& aPayloadBox)
 
 void Rocket::updateVelocity()
 {
-	if (!theEngineBoxes.empty()) {
+	if (!theEngineBoxes.empty() && !flightEnded) {
 
 		/*double currEffectiveExhaustVelocity = currEngineBox->getEffectiveExhaustVelocity();
 		double currBurnTime = currEngineBox->getBurnTime();*/
@@ -101,7 +102,7 @@ void Rocket::updateCom(PayloadBox& aPayloadBox)
 
 bool Rocket::fly(double deltaT, Manager& theManager, Camera3D& camera, OrbitingViewer& orbit)
 {
-
+	if (!flightEnded) {
 		if (!flightStarted) {
 			flightStarted = true;
 			currEngineBox = theEngineBoxes.at(theEngineBoxesLabels[0]);
@@ -147,7 +148,7 @@ bool Rocket::fly(double deltaT, Manager& theManager, Camera3D& camera, OrbitingV
 		timeElapsedInStage += deltaT;
 
 		bool proceedNextStage = false;
-		if (timeElapsedInStage > (currEngineBox->burnTime) && engineBoxFlightCounter+1 < theEngineBoxes.size() && !proceedNextStage) {
+		if (timeElapsedInStage > (currEngineBox->burnTime) && engineBoxFlightCounter + 1 < theEngineBoxes.size() && !proceedNextStage) {
 			data = "Propellant from stage " + std::to_string(stageNumber) + " finished ";
 			theManager.drawText2d(data, theManager.comicsans, 10, 125, .15);
 			data = "Press N to go to next stage";
@@ -163,7 +164,7 @@ bool Rocket::fly(double deltaT, Manager& theManager, Camera3D& camera, OrbitingV
 		else if (timeElapsedInStage > (currEngineBox->burnTime) && engineBoxFlightCounter + 1 >= theEngineBoxes.size()) {
 			data = "Propellant from stage " + std::to_string(stageNumber) + " finished ";
 			theManager.drawText2d(data, theManager.comicsans, 10, 125, .15);
-			data = "Press N to go to return rocket to ground";
+			data = "Press N to return rocket to ground";
 			theManager.drawText2d(data, theManager.comicsans, 10, 140, .15);
 			FsPollDevice();
 			int key = FsInkey();
@@ -171,7 +172,7 @@ bool Rocket::fly(double deltaT, Manager& theManager, Camera3D& camera, OrbitingV
 				return !reuseRocket(orbit);
 			}
 		}
-		
+
 		/*cout << "Current velocity = " << velocity << endl;*/
 		/*cout << "current Y increment = " << velocity * deltaT << endl;*/
 
@@ -200,12 +201,14 @@ bool Rocket::fly(double deltaT, Manager& theManager, Camera3D& camera, OrbitingV
 
 		FsSwapBuffers();
 		return true;
+	}
+		
 }
 
 void Rocket::startNextStage()
 {
 	// move current engine box from theEngineBoxes to theUsedEngineBoxes (both unordered map)
-	theUsedEngineBoxes.insert({ currEngineBox->label , currEngineBox });
+	/*theUsedEngineBoxes.insert({ currEngineBox->label , currEngineBox });*/
 	/*theEngineBoxes.erase(currEngineBox->label);*/
 
 	engineBoxFlightCounter++;
@@ -644,7 +647,8 @@ void Rocket::resetRocket()
 	timeElapsedInStage = 0;
 	baselineVelocity = 0;
 	velocity = 0;
-	currEngineBox = nullptr;
+	/*currEngineBox = nullptr;*/
+	flightEnded = true;
 }
 
 
